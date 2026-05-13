@@ -40,7 +40,8 @@ models/
 .env.yaml
 .credentials
 secrets.toml
-*.json
+secrets.json
+credentials.json
 
 diagnose_nans.py
 my_plot.png
