@@ -6,7 +6,7 @@ import {
   AreaChart, Area
 } from 'recharts'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const FEATURE_LABELS = {
   price_lag_1: 'Price 15min ago', price_lag_4: 'Price 1h ago',

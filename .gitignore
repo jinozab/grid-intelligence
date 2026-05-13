@@ -45,3 +45,5 @@ secrets.toml
 diagnose_nans.py
 my_plot.png
 plot_example.py
+
+frontend/.env.production
