@@ -18,11 +18,20 @@ FORECAST_DAYS      = 3
 # Environment
 ENV = os.getenv("ENV", "development")
 
-# BigQuery
+# BigQuery (legacy — nur noch für Migration)
 GCP_PROJECT  = os.getenv("GCP_PROJECT", "grid-intelligence-2026")
 BQ_DATASET   = "grid_intelligence"
 BQ_TABLE     = "consolidated"
 BQ_TABLE_ID  = f"{GCP_PROJECT}.{BQ_DATASET}.{BQ_TABLE}"
+
+# PostgreSQL
+PG_HOST     = os.getenv("PG_HOST", "localhost")
+PG_PORT     = os.getenv("PG_PORT", "5432")
+PG_DB       = os.getenv("PG_DB", "grid_intelligence")
+PG_USER     = os.getenv("PG_USER", "grid")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "")
+PG_TABLE    = "consolidated"
+DATABASE_URL = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}"
 
 RENEWABLE = [
     'Biomass', 'Geothermal', 'Hydro Pumped Storage',

@@ -87,9 +87,16 @@ def generate_features(nrows: int = 1632, train: bool = True) -> pd.DataFrame:
     pd.DataFrame
         Dataframe with all engineered features ready for model input.
     """
-    from grid_intelligence.params import ENV, GCP_PROJECT, BQ_TABLE_ID
+    from grid_intelligence.params import ENV, GCP_PROJECT, BQ_TABLE_ID, DATABASE_URL, PG_TABLE
 
     if ENV == 'production':
+        from sqlalchemy import create_engine
+        engine = create_engine(DATABASE_URL)
+        query = f"SELECT * FROM {PG_TABLE} WHERE datetime_utc <= NOW() ORDER BY datetime_utc DESC LIMIT {nrows}"
+        df = pd.read_sql(query, engine)
+        df = df.sort_values('datetime_utc').reset_index(drop=True)
+        print(f"✅ Loaded from PostgreSQL: {df.shape}")
+    elif ENV == 'bigquery':
         print(f"Loading data from BigQuery: {BQ_TABLE_ID}")
         query = f"SELECT * FROM `{BQ_TABLE_ID}` WHERE datetime_utc <= CURRENT_TIMESTAMP() ORDER BY datetime_utc DESC LIMIT {nrows}"
         df = pandas_gbq.read_gbq(query, project_id=GCP_PROJECT)
@@ -104,8 +111,6 @@ def generate_features(nrows: int = 1632, train: bool = True) -> pd.DataFrame:
                 f"Please ensure consolidated_full.csv exists in the raw_data/ directory."
             )
         df = pd.read_csv(str(data_path))
-        #df = df.tail(nrows).reset_index(drop=True)
-        # Filter out future rows — only use data up to now
         df['datetime_utc'] = pd.to_datetime(df['datetime_utc'], utc=True)
         df = df[df['datetime_utc'] <= pd.Timestamp.now(tz='UTC')]
         df = df.tail(nrows).reset_index(drop=True)

@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from grid_intelligence.interface.main import predict, _get_models, _get_features
 from grid_intelligence.data.fetcher import DataFetcher
 from grid_intelligence.logic.preprocessor import generate_features
@@ -66,15 +68,31 @@ def _get_explainer(regime: int):
     return _explainers[regime]
 
 
+async def _scheduled_delta_fetch():
+    try:
+        print("⏰ Scheduled delta fetch starting...")
+        from grid_intelligence.data.fetcher import DataFetcher
+        fetcher = DataFetcher()
+        fetcher.fetch_delta()
+        print("✅ Scheduled delta fetch complete")
+    except Exception as e:
+        print(f"❌ Scheduled delta fetch failed: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Warming up models and features...")
     _get_models()
     _get_features()
-    # Explainer für Normal-Regime vorwärmen (häufigster Fall)
     _get_explainer(regime=0)
     print("Warmup complete!")
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(_scheduled_delta_fetch, CronTrigger(hour=6, minute=0, timezone="UTC"))
+    scheduler.start()
+    print("⏰ Scheduler started — delta fetch daily at 06:00 UTC")
+
     yield
+    scheduler.shutdown()
 
 
 app = FastAPI(
@@ -180,18 +198,34 @@ def get_energy_mix(days: int = 7):
     Return renewable vs non-renewable generation and consumption for the last N days.
     """
     try:
-
+        from grid_intelligence.data.fetcher import DataFetcher
+        from sqlalchemy import create_engine, text
+        from grid_intelligence.params import DATABASE_URL, PG_TABLE, ENV
+        from google.cloud import bigquery
         from grid_intelligence.params import GCP_PROJECT, BQ_TABLE_ID
 
-        rows = days * 24 * 4  # 15min intervals
-        query = f"""
-            SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
-            FROM `{BQ_TABLE_ID}`
-            WHERE datetime_utc IS NOT NULL
-            ORDER BY datetime_utc DESC
-            LIMIT {rows}
-        """
-        df = pandas_gbq.read_gbq(query, project_id=GCP_PROJECT)
+        rows = days * 24 * 4
+
+        if ENV == 'production':
+            engine = create_engine(DATABASE_URL)
+            query = f"""
+                SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
+                FROM {PG_TABLE}
+                WHERE datetime_utc IS NOT NULL
+                ORDER BY datetime_utc DESC
+                LIMIT {rows}
+            """
+            df = pd.read_sql(query, engine)
+        else:
+            query = f"""
+                SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
+                FROM `{BQ_TABLE_ID}`
+                WHERE datetime_utc IS NOT NULL
+                ORDER BY datetime_utc DESC
+                LIMIT {rows}
+            """
+            df = pandas_gbq.read_gbq(query, project_id=GCP_PROJECT)
+
         df = df.sort_values('datetime_utc').reset_index(drop=True)
         df['datetime_utc'] = df['datetime_utc'].astype(str)
 
