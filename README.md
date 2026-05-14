@@ -1,4 +1,4 @@
-# ⚡ GridIntelligence
+# GridIntelligence
 
 **Day-ahead electricity price forecasting for the DE-LU bidding zone (Germany / Luxembourg)**
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 🔴 Live Demo
+## Live Demo
 
 **Dashboard** → `http://187.127.79.142:3001`
 **API** → `http://187.127.79.142:8001/docs`
@@ -14,7 +14,7 @@
 
 ---
 
-## 📌 What it does
+## What it does
 
 GridIntelligence predicts electricity prices for the next 72 hours at 15-minute resolution. It helps energy traders, industrial consumers, and grid operators decide **when to buy, sell, or shift energy consumption**.
 
@@ -22,7 +22,7 @@ The system runs fully autonomously — a daily scheduled job fetches new market 
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -48,7 +48,7 @@ The system runs fully autonomously — a daily scheduled job fetches new market 
 
 ---
 
-## 🤖 Models
+## Models
 
 ### XGBoost Multi-Regime (primary)
 
@@ -90,7 +90,7 @@ Every prediction is explained via SHAP values — showing which features pushed 
 
 ---
 
-## 📊 Dataset
+##  Dataset
 
 | Source | Data | Resolution |
 |--------|------|------------|
@@ -104,7 +104,7 @@ Every prediction is explained via SHAP values — showing which features pushed 
 
 ---
 
-## 🧠 Feature Engineering (25 features)
+##  Feature Engineering (25 features)
 
 ```python
 # Price history
@@ -129,7 +129,7 @@ target_is_holiday, target_is_weekend
 
 ---
 
-## 🔄 Data Pipeline
+##  Data Pipeline
 
 ```python
 # Daily automated delta fetch (APScheduler, 06:00 UTC)
@@ -159,7 +159,7 @@ DataFetcher (orchestrator)
 
 ---
 
-## 🚀 API Endpoints
+## API Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
@@ -172,7 +172,7 @@ DataFetcher (orchestrator)
 
 ---
 
-## 🖥️ Dashboard
+## Dashboard
 
 Built with **React + Recharts + Vite**. Three views:
 
@@ -184,7 +184,7 @@ Features: dark/light mode toggle, responsive layout, auto-refresh timestamp.
 
 ---
 
-## 🐳 Deployment
+## Deployment
 
 ```bash
 # Clone and configure
@@ -230,7 +230,7 @@ grid-intelligence/
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -244,7 +244,7 @@ grid-intelligence/
 
 ---
 
-## ⚠️ Known Limitations
+##  Known Limitations
 
 | Issue | Detail |
 |-------|--------|
