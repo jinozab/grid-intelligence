@@ -32,15 +32,13 @@ function downsample(data, maxPoints = 200) {
 
 function Logo({ dark }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <img src="/logo.png" style={{ width: 120, height: 120, objectFit: 'contain',  marginRight: -30 }} />
       <div>
-        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em', color: dark ? '#fff' : '#111', lineHeight: 1 }}>
-          Grid<span style={{ color: '#E8640A' }}>Intelligence</span>
+        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', lineHeight: 1 }}>
+          GridIntelligence
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: '0.5rem', color: dark ? 'rgba(255,255,255,0.35)' : '#999', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>
-          DE-LU · Day-Ahead
-        </div>
+
       </div>
     </div>
   )
@@ -56,7 +54,7 @@ function Avatar() {
 
 function MetricCard({ label, value, unit, sub, accentColor, dark }) {
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#f0f0f0', border: `0px solid ${dark ? '#2a2a2a' : '#ebebeb'}`, borderRadius: 12, padding: '1.2rem 1.3rem', borderTop: `3px solid ${accentColor || '#E8640A'}`, minHeight: 110 }}>
+    <div style={{ background: dark ? '#1a1a1a' : '#f1f1ef', border: `0px solid ${dark ? '#2a2a2a' : '#ebebeb'}`, borderRadius: 12, padding: '1.2rem 1.3rem', borderTop: `3px solid ${accentColor || '#E8640A'}`, minHeight: 110 }}>
       <div style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: dark ? 'rgba(255,255,255,0.4)' : '#999', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: '2.2rem', fontWeight: 700, lineHeight: 1, color: dark ? '#f0f0f0' : '#111', letterSpacing: '-0.02em' }}>
         {value}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.4)' : '#999', marginLeft: 4 }}>{unit}</span>
@@ -69,7 +67,7 @@ function MetricCard({ label, value, unit, sub, accentColor, dark }) {
 function Panel({ title, tag, children, dark }) {
   const border = dark ? '#2a2a2a' : '#ebebeb'
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#f0f0f0', border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ background: dark ? '#1a1a1a' : '#f1f1ef', border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
       {title && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.2rem', borderBottom: `1px solid ${border}` }}>
           <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.4)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
@@ -212,7 +210,7 @@ function PredictView({ dark }) {
               <Tooltip {...TOOLTIP_STYLE(dark)} formatter={v => [`${v.toFixed(1)} €/MWh`, 'Price']} />
               <ReferenceLine y={140} stroke="#e74c3c" strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'spike 140€', fill: '#e74c3c', fontSize: 9, fontFamily: 'monospace', opacity: 0.6 }} />
               <ReferenceLine y={0} stroke="#378ADD" strokeDasharray="4 3" strokeOpacity={0.4} />
-              <Area type="monotone" dataKey="price" stroke="#E8640A" strokeWidth={2} fill="url(#priceGrad)" dot={false} />
+              <Area type="monotone" dataKey="price" stroke="#E8640A"  fill="url(#priceGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </Panel>
@@ -279,8 +277,8 @@ function BacktestView({ dark }) {
               <YAxis tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `${v}€`} axisLine={false} tickLine={false} width={42} />
               <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(1)} €/MWh`, name]} />
               <Legend wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', color: dark ? '#888' : '#aaa' }} />
-              <Line type="monotone" dataKey="actual" stroke="#378ADD" strokeWidth={2} dot={false} name="Actual" />
-              <Line type="monotone" dataKey="predicted" stroke="#E8640A" strokeWidth={1.5} strokeDasharray="4 3" dot={false} name="Predicted" />
+              <Line type="monotone" dataKey="actual" stroke="#378ADD" dot={false} name="Actual" />
+              <Line type="monotone" dataKey="predicted" stroke="#E8640A"   dot={false} name="Predicted" />
             </LineChart>
           </ResponsiveContainer>
         </Panel>
@@ -326,30 +324,86 @@ function EnergyMixView({ dark }) {
         <MetricCard label="Avg conventional" value={(avgNR/1000).toFixed(1)} unit="GW" accentColor="#e74c3c" dark={dark} />
       </div>
 
-      <Panel title="Energy mix · renewable vs conventional · last 7 days" dark={dark}>
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={downsample(chartData)} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-            <defs>
-              <linearGradient id="renewGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#1D9E75" stopOpacity={0.2}/>
-                <stop offset="95%" stopColor="#1D9E75" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#e74c3c" stopOpacity={0.15}/>
-                <stop offset="95%" stopColor="#e74c3c" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 6" stroke={gridStroke} />
-            <XAxis dataKey="ts" tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `${(v/1000).toFixed(0)}GW`} axisLine={false} tickLine={false} width={42} />
-            <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(0)} MW`, name]} />
-            <Legend wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', color: dark ? '#888' : '#aaa' }} />
-            <Area type="monotone" dataKey="renewable" stroke="#1D9E75" strokeWidth={2} fill="url(#renewGrad)" dot={false} name="Renewable" />
-            <Area type="monotone" dataKey="conventional" stroke="#e74c3c" strokeWidth={2} fill="url(#convGrad)" dot={false} name="Conventional" />
-            <Line type="monotone" dataKey="consumption" stroke="#E8640A" strokeWidth={2} strokeDasharray="4 3" dot={false} name="Consumption" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </Panel>
+    <Panel title="Energy mix · renewable vs conventional · last 7 days" dark={dark}>
+      <ResponsiveContainer width="100%" height={400}>
+        {/* Agregamos un filtro para asegurar que no grafique puntos vacíos al final */}
+        <AreaChart
+          data={chartData.filter(d => d.renewable !== null || d.consumption !== null)}
+          margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
+        >
+          <defs>
+            <linearGradient id="renewGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#1D9E75" stopOpacity={0.2}/>
+              <stop offset="95%" stopColor="#1D9E75" stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#e74c3c" stopOpacity={0.15}/>
+              <stop offset="95%" stopColor="#e74c3c" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid  stroke={gridStroke} vertical={false} />
+
+          <XAxis
+            dataKey="ts"
+            tick={{ fill: dark ? '#666' : '#ccc', fontSize: 9, fontFamily: 'monospace' }}
+            interval="preserveStartEnd"
+            minTickGap={60} // Esto evita que las fechas se pisen
+            axisLine={false}
+            tickLine={false}
+          />
+
+          <YAxis
+            tick={{ fill: dark ? '#666' : '#ccc', fontSize: 9, fontFamily: 'monospace' }}
+            tickFormatter={v => `${(v/1000).toFixed(0)}GW`}
+            axisLine={false}
+            tickLine={false}
+            width={45}
+          />
+
+          <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(0)} MW`, name]} />
+
+          <Legend
+            verticalAlign="top"
+            align="right"
+            wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', paddingBottom: '20px' }}
+          />
+
+          {/* connectNulls={true} es la clave para que la línea no se corte */}
+          <Area
+            type="monotone"
+            dataKey="renewable"
+            stroke="#1D9E75"
+
+            fill="url(#renewGrad)"
+            dot={false}
+            name="Renewable"
+            connectNulls={true}
+          />
+
+          <Area
+            type="monotone"
+            dataKey="conventional"
+            stroke="#e74c3c"
+
+            fill="url(#convGrad)"
+            dot={false}
+            name="Conventional"
+            connectNulls={true}
+          />
+
+          <Line
+            type="monotone"
+            dataKey="consumption"
+            stroke="#2e1186"
+
+            dot={false}
+            name="Consumption"
+            connectNulls={true}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </Panel>
     </div>
   )
 }
@@ -529,8 +583,8 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const bg = dark ? '#111' : '#cecccc'
-  const headerBorder = dark ? '#222' : '#ebebeb'
+  const bg = dark ? '#111' : '#bec3bf'
+  const headerBorder = dark ? '#222' : '#bec3bf'
   const navColor = dark ? 'rgba(255,255,255,0.35)' : '#aaa'
   const navActive = dark ? '#fff' : '#111'
   const footerColor = dark ? 'rgba(255,255,255,0.15)' : '#ccc'
@@ -568,10 +622,10 @@ const views = [
           <div style={{ maxWidth: 1280, margin: '0 auto', height: '100%', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Logo dark={dark} />
 
-            <nav style={{ display: 'flex', alignItems: 'center', gap: 4, background: dark ? '#2a2a2a' : '#e0dfd9', borderRadius: 24, padding: '4px' }}>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: 20, background: dark ? '#2a2a2a' : '#dedede', borderRadius: 34, padding: '6px' }}>
               {views.map(v => (
                 <button key={v.id} onClick={() => setView(v.id)} style={{
-                  background: view === v.id ? (dark ? '#3a3a3a' : '#fff') : 'transparent',
+                  background: view === v.id ? (dark ? '#3a3a3a' : '#d3a5a5') : 'transparent',
                   color: view === v.id ? navActive : navColor,
                   border: 'none', borderRadius: 20,
                   padding: '6px 18px', fontFamily: "'DM Sans', sans-serif",
