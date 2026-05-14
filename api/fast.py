@@ -8,6 +8,9 @@ from grid_intelligence.interface.main import predict, _get_models, _get_features
 from grid_intelligence.data.fetcher import DataFetcher
 from grid_intelligence.logic.preprocessor import generate_features
 from grid_intelligence.interface.main import predict_multi_regime
+from datetime import datetime
+from datetime import timezone
+
 import math
 import json
 import pandas as pd
@@ -29,6 +32,12 @@ logger = logging.getLogger(__name__)
 # Explainer cache (wie _models)
 _explainers = {}
 
+# Scheduler status
+_scheduler_status = {
+    "last_run": None,
+    "last_status": None,
+    "last_error": None,
+}
 
 def _get_explainer(regime: int):
     global _explainers
@@ -69,13 +78,19 @@ def _get_explainer(regime: int):
 
 
 async def _scheduled_delta_fetch():
+    global _scheduler_status
+    _scheduler_status["last_run"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     try:
         print("⏰ Scheduled delta fetch starting...")
         from grid_intelligence.data.fetcher import DataFetcher
         fetcher = DataFetcher()
         fetcher.fetch_delta()
+        _scheduler_status["last_status"] = "success"
+        _scheduler_status["last_error"] = None
         print("✅ Scheduled delta fetch complete")
     except Exception as e:
+        _scheduler_status["last_status"] = "failed"
+        _scheduler_status["last_error"] = str(e)
         print(f"❌ Scheduled delta fetch failed: {e}")
 
 @asynccontextmanager
@@ -189,6 +204,29 @@ def explain_prediction():
 @app.get("/")
 def root():
     return {"message": "Grid Intelligence API is running!"}
+
+@app.get("/health")
+def health():
+    try:
+        from sqlalchemy import create_engine, text
+        from grid_intelligence.params import DATABASE_URL, PG_TABLE
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            count = conn.execute(text(f"SELECT COUNT(*) FROM {PG_TABLE}")).scalar()
+            last_update = conn.execute(text(f"SELECT MAX(datetime_utc) FROM {PG_TABLE}")).scalar()
+        return {
+            "status": "ok",
+            "db_rows": count,
+            "last_data_point": str(last_update),
+            "scheduler": {
+                "next_run": "daily at 06:00 UTC",
+                "last_run": _scheduler_status["last_run"] or "not yet run",
+                "last_status": _scheduler_status["last_status"] or "pending",
+                "last_error": _scheduler_status["last_error"],
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/predict")
 def get_predict():
