@@ -33,12 +33,7 @@ function downsample(data, maxPoints = 200) {
 function Logo({ dark }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <rect width="32" height="32" rx="8" fill="#E8640A"/>
-        <path d="M8 22 L13 14 L17 18 L21 10 L24 14" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-        <circle cx="24" cy="14" r="2" fill="white"/>
-        <path d="M8 26 L24 26" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
-      </svg>
+
       <div>
         <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em', color: dark ? '#fff' : '#111', lineHeight: 1 }}>
           Grid<span style={{ color: '#E8640A' }}>Intelligence</span>
@@ -61,9 +56,9 @@ function Avatar() {
 
 function MetricCard({ label, value, unit, sub, accentColor, dark }) {
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#fff', border: `1px solid ${dark ? '#2a2a2a' : '#ebebeb'}`, borderRadius: 12, padding: '1.2rem 1.3rem', borderTop: `3px solid ${accentColor || '#E8640A'}`, minHeight: 110 }}>
+    <div style={{ background: dark ? '#1a1a1a' : '#f0f0f0', border: `0px solid ${dark ? '#2a2a2a' : '#ebebeb'}`, borderRadius: 12, padding: '1.2rem 1.3rem', borderTop: `3px solid ${accentColor || '#E8640A'}`, minHeight: 110 }}>
       <div style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: dark ? 'rgba(255,255,255,0.4)' : '#999', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: '2.2rem', fontWeight: 700, lineHeight: 1, color: dark ? '#fff' : '#111', letterSpacing: '-0.02em' }}>
+      <div style={{ fontSize: '2.2rem', fontWeight: 700, lineHeight: 1, color: dark ? '#f0f0f0' : '#111', letterSpacing: '-0.02em' }}>
         {value}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.4)' : '#999', marginLeft: 4 }}>{unit}</span>
       </div>
       {sub && <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#bbb', marginTop: 6 }}>{sub}</div>}
@@ -74,7 +69,7 @@ function MetricCard({ label, value, unit, sub, accentColor, dark }) {
 function Panel({ title, tag, children, dark }) {
   const border = dark ? '#2a2a2a' : '#ebebeb'
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#fff', border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
+    <div style={{ background: dark ? '#1a1a1a' : '#f0f0f0', border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
       {title && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.2rem', borderBottom: `1px solid ${border}` }}>
           <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.4)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
@@ -118,7 +113,7 @@ function IntelRow({ icon, label, value, rec, valueColor, dark }) {
 }
 
 const TOOLTIP_STYLE = (dark) => ({
-  contentStyle: { background: dark ? '#1a1a1a' : '#fff', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, fontFamily: 'monospace', fontSize: 11, color: dark ? '#e8e6e0' : '#333' },
+  contentStyle: { background: dark ? '#1a1a1a' : '#f0f0f0', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, fontFamily: 'monospace', fontSize: 11, color: dark ? '#e8e6e0' : '#333' },
   cursor: { stroke: dark ? '#444' : '#ddd', strokeWidth: 1 }
 })
 
@@ -162,8 +157,12 @@ function PredictView({ dark }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
 
-      {/* LEFT COLUMN */}
+{/* LEFT COLUMN */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+          <img src="/icons8-prediction-64.png" style={{ width: 44, height: 44, filter: 'invert(55%) sepia(80%) saturate(800%) hue-rotate(350deg)', opacity: 0.9 }} />
+          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Forecast · 72h ahead</span>
+        </div>
 
         {/* Market Intelligence */}
         <Panel title="Market intelligence" dark={dark}>
@@ -224,7 +223,7 @@ function PredictView({ dark }) {
 
 function BacktestView({ dark }) {
   const [data, setData] = useState(null)
-  const [days, setDays] = useState(7)
+  const [days, setDays] = useState(14)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -250,6 +249,10 @@ function BacktestView({ dark }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+          <img src="/icons8-history-50.png" style={{ width: 44, height: 44, filter: 'invert(45%) sepia(80%) saturate(600%) hue-rotate(190deg)', opacity: 0.9 }} />
+          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Backtest · model accuracy</span>
+        </div>
         <MetricCard label={`MAE · ${days}d`} value={mae.toFixed(1)} unit="€/MWh" accentColor="#E8640A" dark={dark} />
         <MetricCard label="Data points" value={filtered.length.toLocaleString()} unit="pts" accentColor="#378ADD" dark={dark} />
         <MetricCard label="Resolution" value="15" unit="min" accentColor="#1D9E75" dark={dark} />
@@ -313,14 +316,18 @@ function EnergyMixView({ dark }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+          <img src="/icons8-solar-energy-50.png" style={{ width: 44, height: 44, filter: 'invert(50%) sepia(80%) saturate(500%) hue-rotate(100deg)', opacity: 0.9 }} />
+          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Energy mix · last 7 days</span>
+        </div>
         <MetricCard label="Renewable share · 7d" value={share.toFixed(1)} unit="%" accentColor="#1D9E75" dark={dark} />
         <MetricCard label="Avg renewable" value={(avgR/1000).toFixed(1)} unit="GW" accentColor="#E8640A" dark={dark} />
         <MetricCard label="Avg conventional" value={(avgNR/1000).toFixed(1)} unit="GW" accentColor="#e74c3c" dark={dark} />
       </div>
 
       <Panel title="Energy mix · renewable vs conventional · last 7 days" dark={dark}>
-        <ResponsiveContainer width="100%" height={380}>
+        <ResponsiveContainer width="100%" height={400}>
           <AreaChart data={downsample(chartData)} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
             <defs>
               <linearGradient id="renewGrad" x1="0" y1="0" x2="0" y2="1">
@@ -333,7 +340,7 @@ function EnergyMixView({ dark }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 6" stroke={gridStroke} />
-            <XAxis dataKey="ts" tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} interval={Math.floor(chartData.length / 7)} axisLine={false} tickLine={false} />
+            <XAxis dataKey="ts" tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} interval="preserveStartEnd" axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `${(v/1000).toFixed(0)}GW`} axisLine={false} tickLine={false} width={42} />
             <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(0)} MW`, name]} />
             <Legend wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', color: dark ? '#888' : '#aaa' }} />
@@ -346,6 +353,171 @@ function EnergyMixView({ dark }) {
     </div>
   )
 }
+
+function AboutView({ dark }) {
+  const border = dark ? '#2a2a2a' : '#ebebeb'
+  const textPrimary = dark ? '#fff' : '#111'
+  const textMuted = dark ? 'rgba(255,255,255,0.45)' : '#888'
+  const textBody = dark ? 'rgba(255,255,255,0.75)' : '#444'
+  const accentBg = dark ? '#1e1e1e' : '#fff'
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: '2.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1.2rem' }}>
+        <div style={{ width: 3, height: 18, background: '#E8640A', borderRadius: 2 }} />
+        <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1rem', fontWeight: 700, color: textPrimary }}>{title}</h2>
+      </div>
+      {children}
+    </div>
+  )
+
+  const Card = ({ children, accent }) => (
+    <div style={{ background: accentBg, border: `1px solid ${border}`, borderLeft: accent ? `3px solid ${accent}` : undefined, borderRadius: 12, padding: '1.2rem 1.4rem', marginBottom: '0.8rem' }}>
+      {children}
+    </div>
+  )
+
+  const Tag = ({ label, color }) => (
+    <span style={{ display: 'inline-block', background: color + '22', border: `1px solid ${color}55`, color, fontFamily: 'monospace', fontSize: '0.6rem', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: 4, marginRight: 6, marginBottom: 4 }}>{label}</span>
+  )
+
+  return (
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+
+      {/* Hero */}
+      <div style={{ marginBottom: '3rem' }}>
+        <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1.8rem', fontWeight: 700, color: textPrimary, letterSpacing: '-0.03em', marginBottom: 8 }}>
+          Grid<span style={{ color: '#E8640A' }}>Intelligence</span>
+        </h1>
+        <p style={{ fontSize: '0.95rem', color: textBody, lineHeight: 1.8, maxWidth: 620 }}>
+          A forecasting tool for day-ahead electricity prices in the German-Luxembourg market (DE-LU). It helps energy traders, industrial consumers, and grid operators make smarter decisions about when to buy, sell, or shift energy consumption.
+        </p>
+      </div>
+
+      {/* What each view does */}
+      <Section title="What does each view tell you?">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
+          {[
+            {
+              view: 'Forecast',
+              color: '#E8640A',
+              what: 'Predicted electricity prices for the next 72 hours at 15-min resolution.',
+              use: 'Decide when to charge batteries, run heavy industrial loads, or activate hedging contracts.',
+            },
+            {
+              view: 'Backtest',
+              color: '#378ADD',
+              what: 'Comparison of past model predictions vs actual market prices.',
+              use: 'Evaluate how accurate the model was over the last 1, 3, 7, or 14 days. MAE tells you the average error in €/MWh.',
+            },
+            {
+              view: 'Energy Mix',
+              color: '#1D9E75',
+              what: 'Renewable vs conventional generation over the last 7 days.',
+              use: 'Understand what drove prices — high solar/wind usually means cheaper prices; gas-heavy periods tend to be expensive.',
+            },
+          ].map(v => (
+            <div key={v.view} style={{ background: accentBg, border: `1px solid ${border}`, borderTop: `3px solid ${v.color}`, borderRadius: 12, padding: '1.2rem' }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: v.color, marginBottom: 8 }}>{v.view}</div>
+              <p style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: textPrimary }}>Shows:</strong> {v.what}</p>
+              <p style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6 }}><strong style={{ color: textPrimary }}>Use it to:</strong> {v.use}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Model */}
+      <Section title="How the model works">
+        <Card accent="#E8640A">
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: textPrimary, marginBottom: 6 }}>
+            XGBoost — Multi-Regime
+          </div>
+          <p style={{ fontSize: '0.85rem', color: textBody, lineHeight: 1.7, marginBottom: 12 }}>
+            The market doesn't behave the same way in all conditions. During normal periods, prices follow predictable patterns. During spikes or negative price events, different forces drive the market. To handle this, we use <strong style={{ color: textPrimary }}>three separate XGBoost models</strong> — one for each regime — plus a classifier that decides which model to use for each prediction.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {[
+              { label: 'Normal regime', sub: 'Most hours', color: '#1D9E75' },
+              { label: 'Positive spike', sub: 'Price > 140 €/MWh', color: '#E8640A' },
+              { label: 'Negative prices', sub: 'Price < 0 €/MWh', color: '#378ADD' },
+            ].map(r => (
+              <div key={r.label} style={{ background: r.color + '11', border: `1px solid ${r.color}33`, borderRadius: 8, padding: '0.7rem 1rem' }}>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.65rem', fontWeight: 700, color: r.color }}>{r.label}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: textMuted, marginTop: 2 }}>{r.sub}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card accent="#9b59b6">
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: textPrimary, marginBottom: 6 }}>
+            SHAP — Why this prediction?
+          </div>
+          <p style={{ fontSize: '0.85rem', color: textBody, lineHeight: 1.7 }}>
+            The "Feature influence" panel explains every prediction. SHAP values show which inputs pushed the price up or down — for example, high solar radiation pushing prices down, or low wind onshore pushing them up. This makes the model transparent and actionable.
+          </p>
+        </Card>
+      </Section>
+
+      {/* Training data */}
+      <Section title="Training data">
+        <Card>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.6rem', color: textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Historical range</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: textPrimary, marginBottom: 4 }}>2018 — 2026</div>
+              <div style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6 }}>Over 267,000 data points at 15-min resolution. Covers multiple market regimes including the 2021–2022 energy crisis.</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.6rem', color: textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Input features (25 total)</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                <Tag label="price lags" color="#E8640A" />
+                <Tag label="moving averages" color="#E8640A" />
+                <Tag label="hour / day / month" color="#378ADD" />
+                <Tag label="holidays" color="#378ADD" />
+                <Tag label="generation" color="#1D9E75" />
+                <Tag label="consumption" color="#1D9E75" />
+                <Tag label="wind onshore" color="#1D9E75" />
+                <Tag label="temperature" color="#378ADD" />
+                <Tag label="solar radiation" color="#378ADD" />
+                <Tag label="TTF gas price" color="#9b59b6" />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Section>
+
+      {/* Live data */}
+      <Section title="How data stays up to date">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
+          {[
+            { icon: '⚡', label: 'ENTSO-E', sub: 'Updated daily', detail: 'Prices, generation, load and wind data for the DE-LU zone. Fetched every morning automatically.', color: '#E8640A' },
+            { icon: '🌤', label: 'Open-Meteo', sub: 'Updated daily', detail: 'Weather observations and 3-day forecast for Germany. Temperature, solar radiation, wind speed, cloud cover.', color: '#378ADD' },
+            { icon: '⛽', label: 'TTF Gas', sub: 'Updated daily', detail: 'European natural gas benchmark price via Yahoo Finance. Highly correlated with electricity prices in Germany.', color: '#1D9E75' },
+          ].map(s => (
+            <div key={s.label} style={{ background: accentBg, border: `1px solid ${border}`, borderTop: `3px solid ${s.color}`, borderRadius: 12, padding: '1.2rem' }}>
+              <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{s.icon}</div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.9rem', color: textPrimary, marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: s.color, marginBottom: 8 }}>{s.sub}</div>
+              <p style={{ fontSize: '0.8rem', color: textBody, lineHeight: 1.6 }}>{s.detail}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 8, padding: '0.8rem 1rem', background: '#E8640A11', border: '1px solid #E8640A33', borderRadius: 8 }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', color: '#E8640A' }}>
+            ⏰ All sources are fetched automatically every day at 06:00 UTC — no manual updates needed.
+          </span>
+        </div>
+      </Section>
+
+      {/* Footer */}
+      <div style={{ padding: '1rem 1.2rem', background: accentBg, border: `1px solid ${border}`, borderRadius: 10, fontFamily: 'monospace', fontSize: '0.65rem', color: textMuted, letterSpacing: '0.06em' }}>
+        Built by Javier Inocente · Le Wagon Berlin · April 2026 · DE-LU Electricity Market Forecasting
+      </div>
+    </div>
+  )
+}
+
 
 export default function App() {
   const [view, setView] = useState('forecast')
@@ -363,11 +535,12 @@ export default function App() {
   const navActive = dark ? '#fff' : '#111'
   const footerColor = dark ? 'rgba(255,255,255,0.15)' : '#ccc'
 
-  const views = [
-    { id: 'forecast', label: 'Forecast' },
-    { id: 'backtest', label: 'Backtest' },
-    { id: 'energymix', label: 'Energy Mix' },
-  ]
+const views = [
+{ id: 'forecast', label: 'Forecast', icon: '/icons8-prediction-64.png' },
+  { id: 'backtest', label: 'Backtest', icon: '/icons8-history-50.png' },
+  { id: 'energymix', label: 'Energy Mix', icon: '/icons8-solar-energy-50.png' },
+  { id: 'about', label: 'About', icon: null },
+]
 
   return (
     <>
@@ -385,7 +558,8 @@ export default function App() {
 
       <div style={{ minHeight: '100vh', background: bg, transition: 'background 0.2s' }}>
 
-        <header style={{ background: bg, borderBottom: `1px solid ${headerBorder}`, height: 60, position: 'sticky', top: 0, zIndex: 100 }}>
+        <header style={{ background: bg, height: 60, position: 'sticky', top: 0, zIndex: 100 }}>
+
           <div style={{ maxWidth: 1280, margin: '0 auto', height: '100%', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Logo dark={dark} />
 
@@ -399,7 +573,10 @@ export default function App() {
                   fontSize: '0.82rem', fontWeight: view === v.id ? 600 : 400,
                   cursor: 'pointer', letterSpacing: '-0.01em',
                   boxShadow: view === v.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none'
-                }}>{v.label}</button>
+                }}>
+                {v.icon && <img src={v.icon} style={{ width: 16, height: 16, marginRight: 6, verticalAlign: 'middle', opacity: view === v.id ? 1 : 0.4 }} />}
+                {v.label}
+              </button>
               ))}
             </nav>
 
@@ -420,9 +597,10 @@ export default function App() {
           {view === 'forecast' && <PredictView dark={dark} />}
           {view === 'backtest' && <BacktestView dark={dark} />}
           {view === 'energymix' && <EnergyMixView dark={dark} />}
+          {view === 'about' && <AboutView dark={dark} />}
         </main>
 
-        <footer style={{ padding: '1.2rem 2rem', marginTop: '2rem' }}>
+        <footer style={{ padding: '1.2rem 2rem', marginTop: '4rem', borderTop: `1px solid ${headerBorder}` }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: footerColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Grid Intelligence · Le Wagon Berlin · April 2026 · DE-LU Electricity Market
