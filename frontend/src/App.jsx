@@ -155,7 +155,7 @@ function PredictView({ dark }) {
   const signal = avgVal < 100 ? { label: 'BUY', color: '#1D9E75' } : avgVal <= 200 ? { label: 'HOLD', color: '#E8640A' } : { label: 'SELL', color: '#e74c3c' }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
+    <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
 
 {/* LEFT COLUMN */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -189,7 +189,7 @@ function PredictView({ dark }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
         {/* Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem' }}>
+        <div className="four-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem' }}>
           <MetricCard label="Min · 72h" value={minVal.toFixed(1)} unit="€/MWh" sub={minTs} accentColor="#1D9E75" dark={dark} />
           <MetricCard label="Max · 72h" value={maxVal.toFixed(1)} unit="€/MWh" sub={maxTs} accentColor={maxVal > 140 ? '#e74c3c' : '#E8640A'} dark={dark} />
           <MetricCard label="Avg · 72h" value={avgVal.toFixed(1)} unit="€/MWh" sub={`σ ± ${stdVal.toFixed(1)}`} accentColor="#378ADD" dark={dark} />
@@ -247,7 +247,7 @@ function BacktestView({ dark }) {
   const mae = maes.reduce((a, b) => a + b, 0) / maes.length
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
+<div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
           <img src="/icons8-history-50.png" style={{ width: 44, height: 44, filter: 'invert(45%) sepia(80%) saturate(600%) hue-rotate(190deg)', opacity: 0.9 }} />
@@ -315,8 +315,8 @@ function EnergyMixView({ dark }) {
   const share = (avgR / (avgR + avgNR) * 100)
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
-<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+<div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
           <img src="/icons8-solar-energy-50.png" style={{ width: 44, height: 44, filter: 'invert(50%) sepia(80%) saturate(500%) hue-rotate(100deg)', opacity: 0.9 }} />
           <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Energy mix · last 7 days</span>
@@ -549,6 +549,11 @@ const views = [
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body, #root { width: 100%; min-height: 100vh; }
         body { background: ${bg}; transition: background 0.2s; overflow-x: hidden; }
+        @media (max-width: 768px) {
+          .two-col { grid-template-columns: 1fr !important; }
+          .four-col { grid-template-columns: repeat(2, 1fr) !important; }
+          .main-pad { padding: 1rem !important; }
+        }
         button { transition: all 0.15s; }
         button:hover { opacity: 0.85; }
         ::-webkit-scrollbar { width: 6px; }
@@ -593,7 +598,7 @@ const views = [
           </div>
         </header>
 
-        <main style={{ padding: '5rem 2rem 4rem 2rem', maxWidth: 1280, margin: '0 auto' }}>
+        <main className="main-pad" style={{ padding: '5rem 2rem 4rem 2rem', maxWidth: 1280, margin: '0 auto' }}>
           {view === 'forecast' && <PredictView dark={dark} />}
           {view === 'backtest' && <BacktestView dark={dark} />}
           {view === 'energymix' && <EnergyMixView dark={dark} />}
