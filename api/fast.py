@@ -123,6 +123,7 @@ app.add_middleware(
         "http://187.127.79.142:3001",
         "http://localhost:5173",
         "http://localhost:3001",
+        "https://grid.jminocente.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
