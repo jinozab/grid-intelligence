@@ -31,7 +31,8 @@ PG_DB       = os.getenv("PG_DB", "grid_intelligence")
 PG_USER     = os.getenv("PG_USER", "grid")
 PG_PASSWORD = os.getenv("PG_PASSWORD", "")
 PG_TABLE    = "consolidated"
-DATABASE_URL = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+from urllib.parse import quote_plus
+DATABASE_URL = f"postgresql://{PG_USER}:{quote_plus(PG_PASSWORD)}@{PG_HOST}:{PG_PORT}/{PG_DB}"
 
 RENEWABLE = [
     'Biomass', 'Geothermal', 'Hydro Pumped Storage',

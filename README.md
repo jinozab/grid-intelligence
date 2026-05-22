@@ -1,258 +1,70 @@
-# GridIntelligence
+# grid·intelligence — Ember redesign · Drop-in instructions
 
-**Day-ahead electricity price forecasting for the DE-LU bidding zone (Germany / Luxembourg)**
+## 1. Reemplazar archivos
 
-> Built as a capstone project at Le Wagon Berlin (April 2026) — end-to-end ML system from raw API data to a live production dashboard.
-
----
-
-## Live Demo
-
-**Dashboard** → `http://187.127.79.142:3001`
-**API** → `http://187.127.79.142:8001/docs`
-**Health** → `http://187.127.79.142:8001/health`
-
----
-
-## What it does
-
-GridIntelligence predicts electricity prices for the next 72 hours at 15-minute resolution. It helps energy traders, industrial consumers, and grid operators decide **when to buy, sell, or shift energy consumption**.
-
-The system runs fully autonomously — a daily scheduled job fetches new market data, updates the database, and serves fresh predictions via REST API.
-
----
-
-## Architecture
+Copiá los archivos de esta carpeta a tu repo:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      VPS (Ubuntu 24.04)                  │
-│                                                         │
-│  ┌──────────────┐    ┌──────────────┐    ┌───────────┐  │
-│  │   React UI   │◄───│   FastAPI    │◄───│ PostgreSQL│  │
-│  │  (Port 3001) │    │  (Port 8001) │    │           │  │
-│  └──────────────┘    └──────┬───────┘    └───────────┘  │
-│                             │                           │
-│                    ┌────────▼────────┐                  │
-│                    │  APScheduler    │                   │
-│                    │  06:00 UTC/day  │                   │
-│                    └────────┬────────┘                  │
-│                             │                           │
-│              ┌──────────────┼──────────────┐            │
-│              ▼              ▼              ▼            │
-│          ENTSO-E       Open-Meteo      Yahoo Finance    │
-│         (prices,       (weather,        (TTF gas)       │
-│        generation)     forecast)                        │
-└─────────────────────────────────────────────────────────┘
+repo/src/App.jsx      →  src/App.jsx       (REEMPLAZA)
+repo/src/index.css    →  src/index.css     (REEMPLAZA)
+repo/index.html       →  index.html        (REEMPLAZA — agrega los <link> de fuentes)
+repo/public/favicon.svg → public/favicon.svg (REEMPLAZA)
 ```
 
----
+`main.jsx` y `package.json` quedan igual. Tus endpoints (`/predict`, `/explain`, `/backtest`, `/energy-mix`) tampoco cambian.
 
-## Models
+## 2. Borrar archivos viejos (ya no se usan)
 
-### XGBoost Multi-Regime (primary)
-
-The electricity market behaves differently across regimes. Instead of one model for all conditions, we train **three specialized XGBoost regressors** — one per market regime — plus a classifier that routes each prediction to the right model.
-
-| Regime | Condition | Share of data |
-|--------|-----------|---------------|
-| Normal | -50 < price < 140 €/MWh | ~85% |
-| Positive spike | price > 140 €/MWh | ~6% |
-| Negative price | price < 0 €/MWh | ~9% |
-
-**Performance:**
-
-| Model | MAE (€/MWh) | Horizon |
-|-------|-------------|---------|
-| Prophet (baseline) | 72.70 | 1 year |
-| ARIMA | 38.93 | 1h |
-| XGBoost 72h | 39.06 | 72h |
-| XGBoost 24h | **31.31** | 24h |
-| Transformer V3 | **~26** | 24h |
-
-### Transformer (PyTorch)
-
-`nn.TransformerEncoder` trained on 24h input windows × 25 features. Auto-detects MPS (Apple Silicon), CUDA (GPU), or CPU.
-
-- 100 epochs · batch 256 · Adam lr=0.001 · MSE loss
-- MAE ~26 €/MWh on held-out test set
-
-### Spike Detector (XGBoost classifier)
-
-Binary classifier that flags prices above 200 €/MWh. Handles severe class imbalance (9% spikes) via `scale_pos_weight=8.3`.
-
-- AUC-ROC: **0.94**
-- Top features: `ma_168h` (42%), `y_scaled` (23%), `year` (6%)
-
-### SHAP Explainability
-
-Every prediction is explained via SHAP values — showing which features pushed the price up or down. Rendered live in the dashboard's "Feature Influence" panel.
-
----
-
-##  Dataset
-
-| Source | Data | Resolution |
-|--------|------|------------|
-| ENTSO-E | Day-ahead prices, generation by type, load, wind onshore (DE-LU zone) | 15 min (native) |
-| Open-Meteo | Temperature, humidity, cloud cover, solar radiation, wind speed — ERA5 hindcast + forecast | hourly → 15min |
-| Yahoo Finance | TTF natural gas, WTI oil, Brent, Henry Hub | daily → ffill 15min |
-
-- **Range:** 2018-10-01 → present (267,000+ rows)
-- **Price cap:** 500 €/MWh (clips 2021–2022 energy crisis outliers)
-- **Storage:** PostgreSQL (production) / BigQuery (legacy)
-
----
-
-##  Feature Engineering (25 features)
-
-```python
-# Price history
-y_scaled, lag_1h, lag_24h, lag_168h, ma_24h, ma_168h
-
-# Temporal
-hour, day_of_week, day_of_year, month, year
-
-# Calendar
-is_holiday, is_weekend  # holidays.Germany
-
-# Grid
-generation, consumption, wind_onshore,
-generation_renewable, generation_non_renewable
-
-# Known future (t+24) — no leakage ✓
-target_hour, target_day_of_week, target_month,
-target_is_holiday, target_is_weekend
+```
+src/App.css                       ← borrar
+public/logo.png                   ← borrar (el logo ahora es SVG inline)
+public/icons8-history-50.png      ← borrar
+public/icons8-prediction-64.png   ← borrar
+public/icons8-solar-energy-50.png ← borrar
+public/icons.svg                  ← borrar (icons ahora son SVG inline)
 ```
 
-> **Key design decision:** "Known future" features (calendar info for the target timestamp t+24) are valid inputs — they are knowable at prediction time without any data leakage.
+## 3. Verificar dependencias
 
----
-
-##  Data Pipeline
-
-```python
-# Daily automated delta fetch (APScheduler, 06:00 UTC)
-fetcher.fetch_delta()
-# → reads last date from DB
-# → fetches (last_date - 7 days) to (today + 3 days forecast)
-# → merges, deduplicates (keep='last' for ENTSO-E revisions)
-# → upserts to PostgreSQL
-```
+Ya tenés todo, pero por las dudas:
 
 ```bash
-# Manual full fetch (first time)
-python fetcher.py --mode full --start 2018-10-01
-
-# Manual delta fetch
-python fetcher.py --mode delta
+npm install
+# axios + recharts + react + react-dom ya están en tu package.json
 ```
 
-### Source classes
-
-```
-DataFetcher (orchestrator)
-├── EntsoeSource     — entsoe-py client, 15min resampling
-├── WeatherSource    — Open-Meteo ERA5 + forecast (auto-split by date)
-└── GasSource        — yfinance daily → ffill to 15min
-```
-
----
-
-## API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /predict` | 72h price forecast at 15-min resolution |
-| `GET /explain` | SHAP top-6 features for current prediction |
-| `GET /backtest?days=N` | Actual vs predicted for last N days |
-| `GET /energy-mix?days=N` | Renewable vs conventional generation |
-| `GET /health` | System status + last delta fetch timestamp |
-| `GET /fetch-delta` | Trigger manual data update |
-
----
-
-## Dashboard
-
-Built with **React + Recharts + Vite**. Three views:
-
-- **Forecast** — 72h price chart, market intelligence table, SHAP feature influence
-- **Backtest** — actual vs predicted comparison with MAE metric
-- **Energy Mix** — renewable vs conventional generation stacked area chart
-
-Features: dark/light mode toggle, responsive layout, auto-refresh timestamp.
-
----
-
-## Deployment
+## 4. Probar
 
 ```bash
-# Clone and configure
-git clone https://github.com/jinozab/grid-intelligence.git
-cd grid-intelligence
-cp .env.example .env  # add ENTSOE_API_KEY, PG_* credentials
-
-# Copy model files (not tracked in git)
-scp -r models/ user@vps:/docker/grid-intelligence/grid_intelligence/
-
-# Deploy
-docker compose up --build -d
+npm run dev
 ```
 
-**docker-compose.yml** spins up:
-- `api` — FastAPI + APScheduler (Port 8001)
-- `frontend` — React/Nginx (Port 3001)
-- `postgres` — PostgreSQL 16
+Vas a ver:
+- Fondo gris-cálido oscuro por default
+- Toggle ☀️/🌙 arriba a la derecha para light mode
+- Logo nuevo (cuadrado-grid con sparkline ámbar)
+- Iconos SVG nuevos en nav
+- Indicador animado (logo pulsa + 4 barritas) mientras carga datos
+- Paleta unificada: ámbar (#f0b070) como acento, verde/rojo solo para semántica
 
----
+## 5. Si algo se rompe
 
-## 📁 Project Structure
+- **Fonts no cargan**: revisá que el `<link>` de Google Fonts esté en `index.html`
+- **Charts vacíos**: la API no respondió, vas a ver "API connection failed"
+- **Light mode raro**: localStorage tiene `grid-mode` guardado, abrir DevTools → Application → Local Storage → borrar y refrescar
 
+## Paleta (por si querés tunear algo)
+
+```js
+dark: {
+  bg: '#16171a',         // fondo principal
+  text: '#ededea',       // texto principal
+  textMuted: '#82827d',  // texto secundario
+  accent: '#f0b070',     // ámbar (acción / brand)
+  pos: '#7dc497',        // verde (positivo)
+  neg: '#e08672',        // rojo (negativo)
+  info: '#9aa5b8',       // azul-gris (neutro)
+}
 ```
-grid-intelligence/
-├── api/
-│   └── fast.py              # FastAPI app + APScheduler
-├── grid_intelligence/
-│   ├── data/
-│   │   └── fetcher.py       # Multi-source data pipeline
-│   ├── logic/
-│   │   ├── preprocessor.py  # Feature engineering
-│   │   └── data.py          # Time features, lags, rolling stats
-│   ├── interface/
-│   │   └── main.py          # Prediction orchestration
-│   └── models/              # Saved .pkl files (git-ignored)
-├── frontend/
-│   └── src/App.jsx          # React dashboard
-├── notebooks/               # EDA + training notebooks
-├── docker-compose.yml
-└── requirements.txt
-```
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| ML | PyTorch (Transformer), XGBoost, SHAP |
-| Data | entsoe-py, openmeteo-requests, yfinance, pandas |
-| API | FastAPI, APScheduler |
-| Frontend | React, Recharts, Vite |
-| Database | PostgreSQL 16 |
-| Infrastructure | Docker, Ubuntu 24.04 VPS |
-| Dev tools | Python 3.10, conda |
-
----
-
-##  Known Limitations
-
-| Issue | Detail |
-|-------|--------|
-| Spike recall 0.29 | Model misses 71% of extreme spikes — structural limitation of gradient boosting on rare events |
-| Weather gap | Trained on observed ERA5 weather; production uses forecasted weather |
-| Cross-border flows | Import/export excluded due to ENTSO-E API latency |
-| Training granularity | Trained on 1h resampled data; 15min retraining is next step |
-
-
-
-*GridIntelligence — DE-LU Electricity Market Forecasting*
+Cambiá `accent` y se actualiza en todos lados.
