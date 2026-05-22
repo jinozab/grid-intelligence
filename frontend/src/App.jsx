@@ -339,7 +339,7 @@ function ForecastView() {
 
   const prices = data.predictions_15min
   const ts = data.timestamps
-  const chartData = ts.map((t, i) => ({ ts: formatHM(t), price: Number(prices[i]?.toFixed(2)) }))
+  const chartData = ts.map((t, i) => ({ ts: formatDay(t) + ' ' + formatHM(t), price: Number(prices[i]?.toFixed(2)) }))
 
   const minVal = Math.min(...prices)
   const maxVal = Math.max(...prices)
