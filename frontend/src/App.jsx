@@ -1,12 +1,173 @@
-import { useState, useEffect } from 'react'
+// src/App.jsx — Ember theme · grid·intelligence
+// Drop-in replacement. Same backend endpoints. Dark mode default, light toggle.
+
+import { useState, useEffect, useContext, createContext } from 'react'
 import axios from 'axios'
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceLine, Legend
+  ReferenceLine, Legend,
 } from 'recharts'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+// ============================================================================
+// THEME
+// ============================================================================
+
+const THEME = {
+  fonts: {
+    sans: "'Inter', system-ui, sans-serif",
+    mono: "'JetBrains Mono', ui-monospace, monospace",
+  },
+  dark: {
+    bg: '#16171a',
+    surface: 'transparent',
+    surfaceAlt: '#1b1c1f',
+    border: '#26272a',
+    borderStrong: '#33343a',
+    text: '#ededea',
+    textMuted: '#82827d',
+    textFaint: '#5a5a55',
+    accent: '#f0b070',
+    accentSoft: 'rgba(240, 176, 112, 0.12)',
+    pos: '#7dc497',
+    neg: '#e08672',
+    info: '#9aa5b8',
+  },
+  light: {
+    bg: '#f7f6f2',
+    surface: 'transparent',
+    surfaceAlt: '#ffffff',
+    border: '#e6e3da',
+    borderStrong: '#d4cfc1',
+    text: '#1a1a1a',
+    textMuted: '#7a786f',
+    textFaint: '#b3afa3',
+    accent: '#c8721d',
+    accentSoft: 'rgba(200, 114, 29, 0.10)',
+    pos: '#3e9a64',
+    neg: '#c4543e',
+    info: '#6a7a92',
+  },
+}
+
+const ThemeCtx = createContext(null)
+const useTheme = () => useContext(ThemeCtx)
+
+// ============================================================================
+// ICONS (inline SVG, stroke-based)
+// ============================================================================
+
+const I = ({ children, size = 16, sw = 1.5, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {children}
+  </svg>
+)
+const Icon = {
+  forecast: (p) => <I {...p}><path d="M3 17l5-6 4 3 5-7 4 5" /><circle cx="3" cy="17" r="1" fill="currentColor" stroke="none" /><circle cx="20" cy="12" r="1" fill="currentColor" stroke="none" /></I>,
+  backtest: (p) => <I {...p}><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v4h4" /><path d="M12 8v4l3 2" /></I>,
+  mix: (p) => <I {...p}><path d="M3 19c2-6 4-2 6-6s4 2 6-4 4 0 6-4" /><path d="M3 19h18" /></I>,
+  about: (p) => <I {...p}><circle cx="12" cy="12" r="9" /><path d="M12 8v.01" /><path d="M11 12h1v5h1" /></I>,
+  spike: (p) => <I {...p}><path d="M3 18l4-10 4 6 3-8 4 12 3-4" /></I>,
+  negative: (p) => <I {...p}><path d="M5 12h14" /><path d="M12 5l-7 7 7 7" /></I>,
+  volatility: (p) => <I {...p}><path d="M2 12c2-4 4 4 6 0s4-6 6 0 4 4 6-4" /></I>,
+  signal: (p) => <I {...p}><path d="M4 20c0-9 7-16 16-16" /><path d="M4 20c0-5 4-9 9-9" /><circle cx="4" cy="20" r="1.5" fill="currentColor" stroke="none" /></I>,
+  sun: (p) => <I {...p}><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></I>,
+  moon: (p) => <I {...p}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></I>,
+  bolt: (p) => <I {...p}><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></I>,
+  cloud: (p) => <I {...p}><path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A4 4 0 0 0 6 18h11z" /><circle cx="16" cy="6" r="2" /></I>,
+  gas: (p) => <I {...p}><path d="M8 21h8" /><path d="M12 17v4" /><path d="M6 12c0-4 6-4 6-9 3 4 6 6 6 10a6 6 0 0 1-12 0z" /></I>,
+}
+
+// ============================================================================
+// LOGO + LIVE INDICATORS
+// ============================================================================
+
+function LogoMark({ size = 26, pulse = false }) {
+  const { palette } = useTheme()
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+      <rect x="2.5" y="2.5" width="19" height="19" rx="4" stroke={palette.text} strokeOpacity="0.45" strokeWidth="1.25" />
+      <path d="M9 4v16M15 4v16M4 9h16M4 15h16" stroke={palette.text} strokeOpacity="0.12" strokeWidth="0.75" />
+      <path d="M5.5 16 L9.5 11 L13 13.5 L18.5 6.5" stroke={palette.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="5.5" cy="16" r="1.6" fill={palette.accent} />
+      <circle cx="18.5" cy="6.5" r="1.6" fill={palette.accent}>
+        {pulse && <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite" />}
+      </circle>
+    </svg>
+  )
+}
+
+function Logo({ pulse = false }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <LogoMark size={26} pulse={pulse} />
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+        <span style={{ fontFamily: THEME.fonts.sans, fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em', color: palette.text }}>
+          grid<span style={{ color: palette.textMuted, fontWeight: 400 }}>·intelligence</span>
+        </span>
+        <span style={{ fontFamily: THEME.fonts.mono, fontSize: 9, color: palette.textFaint, marginTop: 4, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          DE-LU · 15-min · v3
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function LiveDot({ color, size = 6 }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-block', width: size, height: size }}>
+      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: color, opacity: 0.35, animation: 'pulse-ring 1.8s ease-out infinite' }} />
+      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: color }} />
+    </span>
+  )
+}
+
+function LiveSpectrum({ color, height = 11, bars = 4 }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height }}>
+      {Array.from({ length: bars }).map((_, i) => (
+        <span key={i} style={{
+          width: 2, height: '100%', background: color, borderRadius: 1,
+          transformOrigin: 'bottom',
+          animation: `spectrum-bar 1.1s ease-in-out ${i * 0.12}s infinite`,
+        }} />
+      ))}
+    </span>
+  )
+}
+
+function LoadingScreen({ label = 'Querying model' }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', gap: 18 }}>
+      <LogoMark size={48} pulse={true} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <LiveSpectrum color={palette.accent} height={11} />
+        <span style={{ fontFamily: THEME.fonts.mono, fontSize: 11, color: palette.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function ErrorView({ message }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ padding: '3rem 2rem', textAlign: 'center', fontFamily: THEME.fonts.mono, fontSize: 12, color: palette.neg }}>
+      <div style={{ marginBottom: 8 }}>⚠ API connection failed</div>
+      <div style={{ color: palette.textMuted, fontSize: 11 }}>{message}</div>
+    </div>
+  )
+}
+
+// ============================================================================
+// PRIMITIVES
+// ============================================================================
 
 const FEATURE_LABELS = {
   price_lag_1: 'Price 15min ago', price_lag_4: 'Price 1h ago',
@@ -20,102 +181,147 @@ const FEATURE_LABELS = {
   shortwave_radiation_wm2_observed_lag_672: 'Solar rad. 1w ago',
 }
 
-function formatTS(ts) {
+function formatHM(ts) {
   const d = new Date(ts)
-  return d.toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' })
 }
-function downsample(data, maxPoints = 200) {
+function formatDay(ts) {
+  const d = new Date(ts)
+  return d.toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: 'short' })
+}
+function downsample(data, maxPoints = 220) {
   if (data.length <= maxPoints) return data
   const step = Math.ceil(data.length / maxPoints)
   return data.filter((_, i) => i % step === 0)
 }
 
-function Logo({ dark }) {
+function Card({ children, padding = 0, style = {} }) {
+  const { palette } = useTheme()
   return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <img src="/logo.png" style={{ width: 120, height: 120, objectFit: 'contain',  marginRight: -30 }} />
-      <div>
-        <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)', lineHeight: 1 }}>
-          GridIntelligence
-        </div>
+    <div style={{
+      background: 'transparent',
+      border: `1px solid ${palette.border}`,
+      borderRadius: 8,
+      padding,
+      ...style,
+    }}>{children}</div>
+  )
+}
 
+function PanelHeader({ title, tag, right }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.15rem', borderBottom: `1px solid ${palette.border}`, gap: 12 }}>
+      <span style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{title}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {tag && (
+          <span style={{ fontFamily: THEME.fonts.mono, fontSize: 9, color: palette.accent, background: palette.accentSoft, border: `1px solid ${palette.accent}33`, borderRadius: 4, padding: '3px 8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{tag}</span>
+        )}
+        {right}
       </div>
     </div>
   )
 }
 
-function Avatar() {
+function Panel({ title, tag, right, children, bodyStyle }) {
   return (
-    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#E8640A22', border: '1.5px solid #E8640A55', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E8640A', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
-      JI
-    </div>
+    <Card>
+      {title && <PanelHeader title={title} tag={tag} right={right} />}
+      <div style={{ padding: '1.15rem', ...bodyStyle }}>{children}</div>
+    </Card>
   )
 }
 
-function MetricCard({ label, value, unit, sub, accentColor, dark }) {
+function Metric({ label, value, unit, sub, accent, big }) {
+  const { palette } = useTheme()
+  const valueColor = accent || palette.text
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#f1f1ef', border: `0px solid ${dark ? '#2a2a2a' : '#ebebeb'}`, borderRadius: 12, padding: '1.2rem 1.3rem', borderTop: `3px solid ${accentColor || '#E8640A'}`, minHeight: 110 }}>
-      <div style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: dark ? 'rgba(255,255,255,0.4)' : '#999', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: '2.2rem', fontWeight: 700, lineHeight: 1, color: dark ? '#f0f0f0' : '#111', letterSpacing: '-0.02em' }}>
-        {value}<span style={{ fontSize: '0.85rem', fontWeight: 400, color: dark ? 'rgba(255,255,255,0.4)' : '#999', marginLeft: 4 }}>{unit}</span>
+    <div style={{ padding: '14px 0 14px 14px', borderLeft: `2px solid ${accent || palette.borderStrong}`, background: 'transparent' }}>
+      <div style={{ fontFamily: THEME.fonts.mono, fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: palette.textMuted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: THEME.fonts.sans, fontWeight: 600, fontSize: big ? '2.4rem' : '1.85rem', lineHeight: 1, color: valueColor, letterSpacing: '-0.02em' }}>
+        {value}
+        {unit && <span style={{ fontFamily: THEME.fonts.mono, fontSize: 12, fontWeight: 400, color: palette.textMuted, marginLeft: 6, letterSpacing: 0 }}>{unit}</span>}
       </div>
-      {sub && <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#bbb', marginTop: 6 }}>{sub}</div>}
+      {sub && <div style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textFaint, marginTop: 8, letterSpacing: '0.04em' }}>{sub}</div>}
     </div>
   )
 }
 
-function Panel({ title, tag, children, dark }) {
-  const border = dark ? '#2a2a2a' : '#ebebeb'
+function MetricGrid({ children, cols = 4 }) {
+  return <div className="metric-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>{children}</div>
+}
+
+function CustomTooltip({ active, payload, label, formatter }) {
+  const { palette } = useTheme()
+  if (!active || !payload?.length) return null
   return (
-    <div style={{ background: dark ? '#1a1a1a' : '#f1f1ef', border: `1px solid ${border}`, borderRadius: 12, overflow: 'hidden' }}>
-      {title && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.9rem 1.2rem', borderBottom: `1px solid ${border}` }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.4)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{title}</span>
-          {tag && <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: '#E8640A', background: '#fff4ed', border: '1px solid #f9c89b', borderRadius: 4, padding: '2px 8px', textTransform: 'uppercase' }}>{tag}</span>}
+    <div style={{ background: palette.surfaceAlt, border: `1px solid ${palette.borderStrong}`, borderRadius: 6, padding: '8px 12px', fontFamily: THEME.fonts.mono, fontSize: 11, color: palette.text, boxShadow: '0 4px 14px rgba(0,0,0,0.18)' }}>
+      <div style={{ color: palette.textMuted, fontSize: 10, marginBottom: 4 }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 6, height: 6, borderRadius: 1, background: p.color, display: 'inline-block' }} />
+          <span style={{ color: palette.textMuted }}>{p.name || p.dataKey}:</span>
+          <span style={{ color: palette.text, fontWeight: 500 }}>
+            {formatter ? formatter(p.value, p.name) : p.value}
+          </span>
         </div>
-      )}
-      <div style={{ padding: '1rem 1.2rem' }}>{children}</div>
+      ))}
     </div>
   )
 }
 
-function ShapRow({ feature, value, dark }) {
+function SectionLabel({ children, icon }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, letterSpacing: '0.16em', textTransform: 'uppercase', paddingBottom: 4 }}>
+      {icon && <span style={{ color: palette.accent, display: 'flex' }}>{icon}</span>}
+      {children}
+    </div>
+  )
+}
+
+function IntelRow({ icon, label, value, color, rec }) {
+  const { palette } = useTheme()
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr auto', alignItems: 'center', gap: 12 }}>
+      <span style={{ color: palette.textMuted, display: 'flex' }}>{icon}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ fontFamily: THEME.fonts.sans, fontSize: 12, color: palette.textMuted }}>{rec}</span>
+      </div>
+      <span style={{ fontFamily: THEME.fonts.mono, fontSize: 13, fontWeight: 500, color }}>{value}</span>
+    </div>
+  )
+}
+
+function ShapBar({ feature, value, max }) {
+  const { palette } = useTheme()
   const label = FEATURE_LABELS[feature] || feature
   const isUp = value > 0
-  const valColor = isUp ? '#E8640A' : '#1D9E75'
+  const color = isUp ? palette.neg : palette.pos
+  const pct = Math.min(100, Math.abs(value) / max * 100)
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.9rem' }}>
-      <span style={{ fontSize: '0.72rem', color: dark ? 'rgba(255,255,255,0.65)' : '#555', fontFamily: 'monospace' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <i className={`ti ${isUp ? 'ti-trending-up' : 'ti-trending-down'}`} style={{ fontSize: 14, color: valColor }} />
-        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: valColor, fontFamily: 'monospace' }}>
-          {isUp ? '+' : ''}{value.toFixed(3)}
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+        <span style={{ fontFamily: THEME.fonts.sans, fontSize: 12, color: palette.text }}>{label}</span>
+        <span style={{ fontFamily: THEME.fonts.mono, fontSize: 11, color, fontWeight: 500 }}>
+          {isUp ? '+' : ''}{value.toFixed(2)}
         </span>
+      </div>
+      <div style={{ position: 'relative', height: 3, background: palette.border, borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: isUp ? '50%' : `${50 - pct/2}%`, top: 0, height: '100%', width: `${pct/2}%`, background: color, borderRadius: 2 }} />
+        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: palette.borderStrong, opacity: 0.6 }} />
       </div>
     </div>
   )
 }
 
-function IntelRow({ icon, label, value, rec, valueColor, dark }) {
-  const border = dark ? '#222' : '#f0f0f0'
-  return (
-    <tr style={{ borderBottom: `1px solid ${border}` }}>
-      <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '0.65rem', color: dark ? 'rgba(255,255,255,0.4)' : '#999', letterSpacing: '0.06em' }}>
-        <i className={`ti ${icon}`} style={{ fontSize: 14, marginRight: 6, verticalAlign: 'middle' }} />
-        {label}
-      </td>
-      <td style={{ padding: '10px 12px', fontWeight: 700, fontSize: '0.8rem', color: valueColor || (dark ? '#fff' : '#111') }}>{value}</td>
-      <td style={{ padding: '10px 12px', fontSize: '0.78rem', color: dark ? 'rgba(255,255,255,0.6)' : '#555' }}>{rec}</td>
-    </tr>
-  )
-}
+// ============================================================================
+// FORECAST
+// ============================================================================
 
-const TOOLTIP_STYLE = (dark) => ({
-  contentStyle: { background: dark ? '#1a1a1a' : '#f0f0f0', border: `1px solid ${dark ? '#333' : '#e5e5e5'}`, borderRadius: 8, fontFamily: 'monospace', fontSize: 11, color: dark ? '#e8e6e0' : '#333' },
-  cursor: { stroke: dark ? '#444' : '#ddd', strokeWidth: 1 }
-})
-
-function PredictView({ dark }) {
+function ForecastView() {
+  const { palette } = useTheme()
   const [data, setData] = useState(null)
   const [explain, setExplain] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -128,548 +334,506 @@ function PredictView({ dark }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const textMuted = dark ? 'rgba(255,255,255,0.4)' : '#aaa'
-  const borderColor = dark ? '#2a2a2a' : '#ebebeb'
-  const gridStroke = dark ? '#222' : '#f0f0f0'
-
-  if (loading) return <div style={{ padding: '3rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#E8640A' }}>Loading forecast...</div>
-  if (error || !data) return <div style={{ padding: '3rem', fontFamily: 'monospace', color: '#e74c3c' }}>API connection failed — {error}</div>
+  if (loading) return <LoadingScreen label="Predicting 72h ahead" />
+  if (error || !data) return <ErrorView message={error} />
 
   const prices = data.predictions_15min
-  const timestamps = data.timestamps
-  const chartData = timestamps.map((ts, i) => ({ ts: formatTS(ts), price: Number(prices[i]?.toFixed(2)) }))
+  const ts = data.timestamps
+  const chartData = ts.map((t, i) => ({ ts: formatDay(t) + ' ' + formatHM(t), price: Number(prices[i]?.toFixed(2)) }))
 
   const minVal = Math.min(...prices)
   const maxVal = Math.max(...prices)
   const avgVal = prices.reduce((a, b) => a + b, 0) / prices.length
   const stdVal = Math.sqrt(prices.reduce((a, b) => a + (b - avgVal) ** 2, 0) / prices.length)
-  const minTs = formatTS(timestamps[prices.indexOf(minVal)])
-  const maxTs = formatTS(timestamps[prices.indexOf(maxVal)])
+  const minTs = formatDay(ts[prices.indexOf(minVal)]) + ' · ' + formatHM(ts[prices.indexOf(minVal)])
+  const maxTs = formatDay(ts[prices.indexOf(maxVal)]) + ' · ' + formatHM(ts[prices.indexOf(maxVal)])
   const spikeHours = prices.filter(p => p > 140).length / 4
   const negHours = prices.filter(p => p < 0).length / 4
-  const regimeMap = { 0: 'Normal', 1: 'Positive spike', 2: 'Negative spike' }
+  const regimeMap = { 0: 'Normal regime', 1: 'Positive spike', 2: 'Negative spike' }
   const regime = explain?.regime ?? 0
-  const maxShap = explain ? Math.abs(explain.top_features[0].shap_value) : 1
-  const signal = avgVal < 100 ? { label: 'BUY', color: '#1D9E75' } : avgVal <= 200 ? { label: 'HOLD', color: '#E8640A' } : { label: 'SELL', color: '#e74c3c' }
+  const signal = avgVal < 100
+    ? { label: 'BUY', color: palette.pos, rec: 'Charge / load up' }
+    : avgVal <= 200
+      ? { label: 'HOLD', color: palette.accent, rec: 'Monitor closely' }
+      : { label: 'SELL', color: palette.neg, rec: 'Reduce load' }
 
   return (
-    <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-{/* LEFT COLUMN */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-          <img src="/icons8-prediction-64.png" style={{ width: 44, height: 44, filter: 'invert(55%) sepia(80%) saturate(800%) hue-rotate(350deg)', opacity: 0.9 }} />
-          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Forecast · 72h ahead</span>
-        </div>
+      <SectionLabel icon={<Icon.forecast size={13} />}>Forecast · 72h ahead · 15-min resolution</SectionLabel>
 
-        {/* Market Intelligence */}
-        <Panel title="Market intelligence" dark={dark}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', margin: '-1rem -1.2rem', width: 'calc(100% + 2.4rem)' }}>
-            <tbody>
-              <IntelRow icon="ti-bolt" label="Spike risk" value={`${spikeHours.toFixed(0)}h above 140€`} valueColor={spikeHours > 0 ? '#e74c3c' : '#1D9E75'} rec={spikeHours > 0 ? 'Activate hedging' : 'No spike risk ✓'} dark={dark} />
-              <IntelRow icon="ti-arrow-down" label="Neg. prices" value={`${negHours.toFixed(0)}h below 0€`} valueColor={negHours > 0 ? '#1D9E75' : (dark ? '#fff' : '#111')} rec={negHours > 0 ? 'Maximize load' : 'None expected'} dark={dark} />
-              <IntelRow icon="ti-wave-sine" label="Volatility" value={`σ = ${stdVal.toFixed(1)} €`} valueColor={stdVal > 40 ? '#e74c3c' : stdVal > 20 ? '#E8640A' : '#1D9E75'} rec={stdVal > 40 ? 'High — trade actively' : stdVal > 20 ? 'Moderate' : 'Stable'} dark={dark} />
-              <IntelRow icon="ti-antenna" label="Signal" value={signal.label} valueColor={signal.color} rec={avgVal < 100 ? 'Charge batteries' : avgVal > 200 ? 'Reduce load' : 'Monitor'} dark={dark} />
-            </tbody>
-          </table>
-        </Panel>
+      <MetricGrid cols={4}>
+        <Metric label="Min · 72h" value={minVal.toFixed(1)} unit="€/MWh" sub={minTs} accent={palette.pos} />
+        <Metric label="Max · 72h" value={maxVal.toFixed(1)} unit="€/MWh" sub={maxTs} accent={maxVal > 140 ? palette.neg : palette.accent} />
+        <Metric label="Avg · 72h" value={avgVal.toFixed(1)} unit="€/MWh" sub={`σ ± ${stdVal.toFixed(1)}`} accent={palette.info} />
+        <Metric label="Signal" value={signal.label} sub={signal.rec} accent={signal.color} />
+      </MetricGrid>
 
-        {/* Feature Influence */}
-        <Panel title={`Feature influence · ${regimeMap[regime]}`} dark={dark}>
-          {explain?.top_features.map((f, i) => (
-            <ShapRow key={i} feature={f.feature} value={f.shap_value} maxVal={maxShap} dark={dark} />
-          ))}
-          {!explain && <div style={{ color: textMuted, fontSize: '0.7rem', fontFamily: 'monospace' }}>Unavailable</div>}
-        </Panel>
-      </div>
-
-      {/* RIGHT COLUMN */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-        {/* Metrics */}
-        <div className="four-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem' }}>
-          <MetricCard label="Min · 72h" value={minVal.toFixed(1)} unit="€/MWh" sub={minTs} accentColor="#1D9E75" dark={dark} />
-          <MetricCard label="Max · 72h" value={maxVal.toFixed(1)} unit="€/MWh" sub={maxTs} accentColor={maxVal > 140 ? '#e74c3c' : '#E8640A'} dark={dark} />
-          <MetricCard label="Avg · 72h" value={avgVal.toFixed(1)} unit="€/MWh" sub={`σ ± ${stdVal.toFixed(1)}`} accentColor="#378ADD" dark={dark} />
-          <MetricCard label="Signal" value={signal.label} unit="" sub={`Avg ${avgVal.toFixed(0)} €`} accentColor={signal.color} dark={dark} />
-        </div>
-
-        {/* Chart */}
-        <Panel title="Price forecast · 15-min · Europe/Berlin" tag="72h horizon" dark={dark}>
-          <ResponsiveContainer width="100%" height={340}>
-            <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+      <Panel title="Price forecast · 15-min · Europe/Berlin" tag="72h horizon" right={<LiveSpectrum color={palette.accent} height={11} />}>
+        <div style={{ width: '100%', height: 360 }}>
+          <ResponsiveContainer>
+            <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 4 }}>
               <defs>
                 <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#E8640A" stopOpacity={0.12}/>
-                  <stop offset="95%" stopColor="#E8640A" stopOpacity={0}/>
+                  <stop offset="0%" stopColor={palette.accent} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={palette.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 6" stroke={gridStroke} />
-              <XAxis dataKey="ts" tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} interval={Math.floor(chartData.length / 7)} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `${v}€`} axisLine={false} tickLine={false} width={42} />
-              <Tooltip {...TOOLTIP_STYLE(dark)} formatter={v => [`${v.toFixed(1)} €/MWh`, 'Price']} />
-              <ReferenceLine y={140} stroke="#e74c3c" strokeDasharray="4 3" strokeOpacity={0.5} label={{ value: 'spike 140€', fill: '#e74c3c', fontSize: 9, fontFamily: 'monospace', opacity: 0.6 }} />
-              <ReferenceLine y={0} stroke="#378ADD" strokeDasharray="4 3" strokeOpacity={0.4} />
-              <Area type="monotone" dataKey="price" stroke="#E8640A"  fill="url(#priceGrad)" dot={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke={palette.border} vertical={false} />
+              <XAxis dataKey="ts" tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} interval={Math.floor(chartData.length / 8)} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} tickFormatter={v => `${v}`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={<CustomTooltip formatter={v => `${v.toFixed(1)} €/MWh`} />} />
+              <ReferenceLine y={140} stroke={palette.neg} strokeDasharray="3 4" strokeOpacity={0.4} label={{ value: 'spike 140€', fill: palette.neg, fontSize: 9, fontFamily: THEME.fonts.mono, opacity: 0.7, position: 'insideTopRight' }} />
+              <ReferenceLine y={0} stroke={palette.info} strokeDasharray="3 4" strokeOpacity={0.35} />
+              <Area type="monotone" dataKey="price" stroke={palette.accent} strokeWidth={1.6} fill="url(#priceGrad)" dot={false} activeDot={{ r: 4, fill: palette.accent, stroke: palette.bg, strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
+        </div>
+      </Panel>
+
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <Panel title="Market intelligence">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <IntelRow icon={<Icon.spike size={14} />} label="Spike risk" value={`${spikeHours.toFixed(0)}h above 140€`} color={spikeHours > 0 ? palette.neg : palette.pos} rec={spikeHours > 0 ? 'Activate hedging' : 'No spike risk'} />
+            <IntelRow icon={<Icon.negative size={14} />} label="Negative prices" value={`${negHours.toFixed(0)}h below 0€`} color={negHours > 0 ? palette.pos : palette.text} rec={negHours > 0 ? 'Maximize load' : 'None expected'} />
+            <IntelRow icon={<Icon.volatility size={14} />} label="Volatility" value={`σ = ${stdVal.toFixed(1)} €`} color={stdVal > 40 ? palette.neg : stdVal > 20 ? palette.accent : palette.pos} rec={stdVal > 40 ? 'High — trade actively' : stdVal > 20 ? 'Moderate' : 'Stable'} />
+            <IntelRow icon={<Icon.signal size={14} />} label="Signal" value={signal.label} color={signal.color} rec={signal.rec} />
+          </div>
+        </Panel>
+
+        <Panel title="Feature influence" tag={regimeMap[regime]}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {explain?.top_features.map((f, i) => (
+              <ShapBar key={i} feature={f.feature} value={f.shap_value} max={Math.max(...explain.top_features.map(x => Math.abs(x.shap_value)))} />
+            ))}
+            {!explain && <div style={{ color: palette.textMuted, fontSize: 12, fontFamily: THEME.fonts.mono }}>Unavailable</div>}
+          </div>
         </Panel>
       </div>
     </div>
   )
 }
 
-function BacktestView({ dark }) {
+// ============================================================================
+// BACKTEST
+// ============================================================================
+
+function BacktestView() {
+  const { palette } = useTheme()
   const [data, setData] = useState(null)
   const [days, setDays] = useState(14)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    axios.get(`${API}/backtest?days=14`).then(r => setData(r.data)).finally(() => setLoading(false))
+    axios.get(`${API}/backtest?days=14`)
+      .then(r => setData(r.data))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
   }, [])
 
-  const textMuted = dark ? 'rgba(255,255,255,0.4)' : '#aaa'
-  const borderColor = dark ? '#2a2a2a' : '#ebebeb'
-  const gridStroke = dark ? '#222' : '#f0f0f0'
-
-  if (loading) return <div style={{ padding: '3rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#E8640A' }}>Loading backtest...</div>
-  if (!data?.actual) return <div style={{ padding: '3rem', fontFamily: 'monospace', color: '#e74c3c' }}>No backtest data</div>
+  if (loading) return <LoadingScreen label="Loading backtest" />
+  if (error || !data?.actual) return <ErrorView message={error || 'No backtest data'} />
 
   const cutoff = new Date(data.timestamps[data.timestamps.length - 1])
   cutoff.setDate(cutoff.getDate() - days)
   const filtered = data.timestamps
-    .map((ts, i) => ({ ts: formatTS(ts), actual: data.actual[i], predicted: data.predicted[i] }))
+    .map((t, i) => ({ ts: formatDay(t), actual: data.actual[i], predicted: data.predicted[i] }))
     .filter((_, i) => new Date(data.timestamps[i]) >= cutoff)
 
   const maes = filtered.map(d => Math.abs((d.actual || 0) - (d.predicted || 0)))
   const mae = maes.reduce((a, b) => a + b, 0) / maes.length
+  const rmse = Math.sqrt(maes.reduce((a, b) => a + b * b, 0) / maes.length)
+  const residual = downsample(filtered.map(d => ({ ts: d.ts, err: (d.predicted || 0) - (d.actual || 0) })))
 
   return (
-<div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-          <img src="/icons8-history-50.png" style={{ width: 44, height: 44, filter: 'invert(45%) sepia(80%) saturate(600%) hue-rotate(190deg)', opacity: 0.9 }} />
-          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Backtest · model accuracy</span>
-        </div>
-        <MetricCard label={`MAE · ${days}d`} value={mae.toFixed(1)} unit="€/MWh" accentColor="#E8640A" dark={dark} />
-        <MetricCard label="Data points" value={filtered.length.toLocaleString()} unit="pts" accentColor="#378ADD" dark={dark} />
-        <MetricCard label="Resolution" value="15" unit="min" accentColor="#1D9E75" dark={dark} />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <SectionLabel icon={<Icon.backtest size={13} />}>Backtest · Model accuracy review</SectionLabel>
+        <div style={{ display: 'flex', gap: 4, padding: 3, border: `1px solid ${palette.border}`, borderRadius: 999 }}>
           {[1, 3, 7, 14].map(d => (
             <button key={d} onClick={() => setDays(d)} style={{
-              background: days === d ? '#E8640A' : 'transparent',
-              color: days === d ? '#fff' : (dark ? 'rgba(255,255,255,0.4)' : '#999'),
-              border: `1px solid ${days === d ? '#E8640A' : (dark ? '#333' : '#e5e5e5')}`,
-              borderRadius: 20, padding: '4px 16px', fontFamily: 'monospace',
-              fontSize: '0.65rem', cursor: 'pointer'
-            }}>{d}d</button>
+              background: days === d ? palette.accent : 'transparent',
+              color: days === d ? palette.bg : palette.textMuted,
+              border: 'none', borderRadius: 999, padding: '5px 14px',
+              fontFamily: THEME.fonts.mono, fontSize: 11, cursor: 'pointer',
+              fontWeight: days === d ? 600 : 400, letterSpacing: '0.04em',
+            }}>{d}D</button>
           ))}
         </div>
+      </div>
 
-        <Panel title={`Actual vs predicted · ${days}-day window`} dark={dark}>
-          <ResponsiveContainer width="100%" height={360}>
-            <LineChart data={downsample(filtered)} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 6" stroke={gridStroke} />
-              <XAxis dataKey="ts" tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} interval={Math.floor(filtered.length / 7)} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: dark ? '#444' : '#ccc', fontSize: 9, fontFamily: 'monospace' }} tickFormatter={v => `${v}€`} axisLine={false} tickLine={false} width={42} />
-              <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(1)} €/MWh`, name]} />
-              <Legend wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', color: dark ? '#888' : '#aaa' }} />
-              <Line type="monotone" dataKey="actual" stroke="#378ADD" dot={false} name="Actual" />
-              <Line type="monotone" dataKey="predicted" stroke="#E8640A"   dot={false} name="Predicted" />
+      <MetricGrid cols={4}>
+        <Metric label={`MAE · ${days}d`} value={mae.toFixed(1)} unit="€/MWh" sub={`${filtered.length.toLocaleString()} pts`} accent={palette.accent} big />
+        <Metric label="RMSE" value={rmse.toFixed(1)} unit="€/MWh" sub="Root mean sq. error" accent={palette.info} />
+        <Metric label="Coverage" value={days} unit="days" sub="Sliding window" accent={palette.pos} />
+        <Metric label="Resolution" value="15" unit="min" sub="Quarter-hour bars" accent={palette.info} />
+      </MetricGrid>
+
+      <Panel title={`Actual vs predicted · ${days}-day window`} tag={`MAE ${mae.toFixed(1)}€`} right={<LiveSpectrum color={palette.accent} height={11} />}>
+        <div style={{ width: '100%', height: 360 }}>
+          <ResponsiveContainer>
+            <LineChart data={downsample(filtered)} margin={{ top: 10, right: 12, left: 0, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke={palette.border} vertical={false} />
+              <XAxis dataKey="ts" tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} interval={Math.floor(filtered.length / 7)} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} tickFormatter={v => `${v}`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={<CustomTooltip formatter={v => `${v?.toFixed(1)} €/MWh`} />} />
+              <Legend wrapperStyle={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, paddingTop: 8 }} iconType="plainline" iconSize={18} />
+              <Line type="monotone" dataKey="actual" stroke={palette.info} strokeWidth={1.4} dot={false} name="Actual" />
+              <Line type="monotone" dataKey="predicted" stroke={palette.accent} strokeWidth={1.6} dot={false} name="Predicted" />
             </LineChart>
           </ResponsiveContainer>
-        </Panel>
-      </div>
+        </div>
+      </Panel>
+
+      <Panel title="Residual error · predicted − actual">
+        <div style={{ width: '100%', height: 140 }}>
+          <ResponsiveContainer>
+            <AreaChart data={residual} margin={{ top: 6, right: 12, left: 0, bottom: 4 }}>
+              <defs>
+                <linearGradient id="resGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={palette.accent} stopOpacity={0.32} />
+                  <stop offset="100%" stopColor={palette.accent} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="2 4" stroke={palette.border} vertical={false} />
+              <XAxis dataKey="ts" hide />
+              <YAxis tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} axisLine={false} tickLine={false} width={36} />
+              <ReferenceLine y={0} stroke={palette.borderStrong} />
+              <Tooltip content={<CustomTooltip formatter={v => `${v?.toFixed(1)} €`} />} />
+              <Area type="monotone" dataKey="err" stroke={palette.accent} strokeWidth={1} fill="url(#resGrad)" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
     </div>
   )
 }
 
-function EnergyMixView({ dark }) {
+// ============================================================================
+// ENERGY MIX
+// ============================================================================
+
+function EnergyMixView() {
+  const { palette } = useTheme()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    axios.get(`${API}/energy-mix?days=7`).then(r => setData(r.data)).catch(e => setError(e.message)).finally(() => setLoading(false))
+    axios.get(`${API}/energy-mix?days=7`)
+      .then(r => setData(r.data))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
   }, [])
 
-  const gridStroke = dark ? '#222' : '#f0f0f0'
+  if (loading) return <LoadingScreen label="Loading energy mix" />
+  if (error || !data?.timestamps) return <ErrorView message={error || 'Energy mix unavailable'} />
 
-  if (loading) return <div style={{ padding: '3rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#E8640A' }}>Loading energy mix...</div>
-  if (error || !data?.timestamps) return <div style={{ padding: '3rem', fontFamily: 'monospace', color: '#e74c3c' }}>Energy mix unavailable</div>
-
-  const chartData = data.timestamps.map((ts, i) => ({
-    ts: formatTS(ts),
+  const chart = data.timestamps.map((t, i) => ({
+    ts: formatDay(t) + ' ' + formatHM(t),
     renewable: data.generation_renewable[i],
     conventional: data.generation_non_renewable[i],
     consumption: data.consumption[i],
   }))
 
-  const avgR = data.generation_renewable.filter(Boolean).reduce((a, b) => a + b, 0) / data.generation_renewable.filter(Boolean).length
-  const avgNR = data.generation_non_renewable.filter(Boolean).reduce((a, b) => a + b, 0) / data.generation_non_renewable.filter(Boolean).length
-  const share = (avgR / (avgR + avgNR) * 100)
+  const validR = data.generation_renewable.filter(Boolean)
+  const validNR = data.generation_non_renewable.filter(Boolean)
+  const validC = data.consumption.filter(Boolean)
+  const avgR = validR.reduce((a, b) => a + b, 0) / validR.length
+  const avgNR = validNR.reduce((a, b) => a + b, 0) / validNR.length
+  const avgC = validC.reduce((a, b) => a + b, 0) / validC.length
+  const share = avgR / (avgR + avgNR) * 100
+  const peakR = Math.max(...data.generation_renewable.filter(v => v != null))
 
   return (
-<div className="two-col" style={{ display: 'grid', gridTemplateColumns: '30% 1fr', gap: '1.5rem', alignItems: 'start' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
-          <img src="/icons8-solar-energy-50.png" style={{ width: 44, height: 44, filter: 'invert(50%) sepia(80%) saturate(500%) hue-rotate(100deg)', opacity: 0.9 }} />
-          <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.3)' : '#aaa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Energy mix · last 7 days</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <SectionLabel icon={<Icon.mix size={13} />}>Energy mix · Last 7 days · DE-LU</SectionLabel>
+
+      <MetricGrid cols={4}>
+        <Metric label="Renewable share" value={share.toFixed(1)} unit="%" sub="7-day average" accent={palette.pos} big />
+        <Metric label="Avg renewable" value={(avgR / 1000).toFixed(1)} unit="GW" sub={`peak ${(peakR/1000).toFixed(1)} GW`} accent={palette.pos} />
+        <Metric label="Avg conventional" value={(avgNR / 1000).toFixed(1)} unit="GW" sub="Gas + coal + nuclear" accent={palette.neg} />
+        <Metric label="Avg consumption" value={(avgC / 1000).toFixed(1)} unit="GW" sub="DE-LU total load" accent={palette.info} />
+      </MetricGrid>
+
+      <Panel title="Generation vs consumption · 7-day window" tag="15-min resolution" right={<LiveSpectrum color={palette.accent} height={11} />}>
+        <div style={{ width: '100%', height: 400 }}>
+          <ResponsiveContainer>
+            <AreaChart data={downsample(chart.filter(d => d.renewable != null || d.consumption != null), 250)} margin={{ top: 10, right: 12, left: 0, bottom: 4 }}>
+              <defs>
+                <linearGradient id="renewGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={palette.pos} stopOpacity={0.32} />
+                  <stop offset="100%" stopColor={palette.pos} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={palette.neg} stopOpacity={0.18} />
+                  <stop offset="100%" stopColor={palette.neg} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="2 4" stroke={palette.border} vertical={false} />
+              <XAxis dataKey="ts" tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} interval="preserveStartEnd" minTickGap={70} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: palette.textFaint, fontSize: 10, fontFamily: THEME.fonts.mono }} tickFormatter={v => `${(v/1000).toFixed(0)}`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={<CustomTooltip formatter={v => `${(v/1000)?.toFixed(1)} GW`} />} />
+              <Legend wrapperStyle={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, paddingTop: 8 }} iconType="plainline" iconSize={18} />
+              <Area type="monotone" dataKey="renewable" stroke={palette.pos} strokeWidth={1.4} fill="url(#renewGrad)" dot={false} name="Renewable" connectNulls />
+              <Area type="monotone" dataKey="conventional" stroke={palette.neg} strokeWidth={1.4} fill="url(#convGrad)" dot={false} name="Conventional" connectNulls />
+              <Line type="monotone" dataKey="consumption" stroke={palette.accent} strokeWidth={1.6} dot={false} name="Consumption" connectNulls />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        <MetricCard label="Renewable share · 7d" value={share.toFixed(1)} unit="%" accentColor="#1D9E75" dark={dark} />
-        <MetricCard label="Avg renewable" value={(avgR/1000).toFixed(1)} unit="GW" accentColor="#E8640A" dark={dark} />
-        <MetricCard label="Avg conventional" value={(avgNR/1000).toFixed(1)} unit="GW" accentColor="#e74c3c" dark={dark} />
-      </div>
-
-    <Panel title="Energy mix · renewable vs conventional · last 7 days" dark={dark}>
-      <ResponsiveContainer width="100%" height={400}>
-        {/* Agregamos un filtro para asegurar que no grafique puntos vacíos al final */}
-        <AreaChart
-          data={chartData.filter(d => d.renewable !== null || d.consumption !== null)}
-          margin={{ top: 10, right: 30, left: 0, bottom: 20 }}
-        >
-          <defs>
-            <linearGradient id="renewGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#1D9E75" stopOpacity={0.2}/>
-              <stop offset="95%" stopColor="#1D9E75" stopOpacity={0}/>
-            </linearGradient>
-            <linearGradient id="convGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#e74c3c" stopOpacity={0.15}/>
-              <stop offset="95%" stopColor="#e74c3c" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-
-          <CartesianGrid  stroke={gridStroke} vertical={false} />
-
-          <XAxis
-            dataKey="ts"
-            tick={{ fill: dark ? '#666' : '#ccc', fontSize: 9, fontFamily: 'monospace' }}
-            interval="preserveStartEnd"
-            minTickGap={60} // Esto evita que las fechas se pisen
-            axisLine={false}
-            tickLine={false}
-          />
-
-          <YAxis
-            tick={{ fill: dark ? '#666' : '#ccc', fontSize: 9, fontFamily: 'monospace' }}
-            tickFormatter={v => `${(v/1000).toFixed(0)}GW`}
-            axisLine={false}
-            tickLine={false}
-            width={45}
-          />
-
-          <Tooltip {...TOOLTIP_STYLE(dark)} formatter={(v, name) => [`${v?.toFixed(0)} MW`, name]} />
-
-          <Legend
-            verticalAlign="top"
-            align="right"
-            wrapperStyle={{ fontFamily: 'monospace', fontSize: '0.62rem', paddingBottom: '20px' }}
-          />
-
-          {/* connectNulls={true} es la clave para que la línea no se corte */}
-          <Area
-            type="monotone"
-            dataKey="renewable"
-            stroke="#1D9E75"
-
-            fill="url(#renewGrad)"
-            dot={false}
-            name="Renewable"
-            connectNulls={true}
-          />
-
-          <Area
-            type="monotone"
-            dataKey="conventional"
-            stroke="#e74c3c"
-
-            fill="url(#convGrad)"
-            dot={false}
-            name="Conventional"
-            connectNulls={true}
-          />
-
-          <Line
-            type="monotone"
-            dataKey="consumption"
-            stroke="#2e1186"
-
-            dot={false}
-            name="Consumption"
-            connectNulls={true}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </Panel>
+      </Panel>
     </div>
   )
 }
 
-function AboutView({ dark }) {
-  const border = dark ? '#2a2a2a' : '#ebebeb'
-  const textPrimary = dark ? '#fff' : '#111'
-  const textMuted = dark ? 'rgba(255,255,255,0.45)' : '#888'
-  const textBody = dark ? 'rgba(255,255,255,0.75)' : '#444'
-  const accentBg = dark ? '#1e1e1e' : '#fff'
+// ============================================================================
+// ABOUT
+// ============================================================================
 
-  const Section = ({ title, children }) => (
-    <div style={{ marginBottom: '2.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1.2rem' }}>
-        <div style={{ width: 3, height: 18, background: '#E8640A', borderRadius: 2 }} />
-        <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1rem', fontWeight: 700, color: textPrimary }}>{title}</h2>
-      </div>
-      {children}
+function AboutView() {
+  const { palette } = useTheme()
+
+  const Heading = ({ children }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12, marginBottom: 18, borderBottom: `1px solid ${palette.border}` }}>
+      <div style={{ width: 2, height: 14, background: palette.accent, borderRadius: 1 }} />
+      <h2 style={{ fontFamily: THEME.fonts.sans, fontSize: 15, fontWeight: 600, color: palette.text, letterSpacing: '-0.01em', margin: 0 }}>{children}</h2>
     </div>
   )
 
-  const Card = ({ children, accent }) => (
-    <div style={{ background: accentBg, border: `1px solid ${border}`, borderLeft: accent ? `3px solid ${accent}` : undefined, borderRadius: 12, padding: '1.2rem 1.4rem', marginBottom: '0.8rem' }}>
-      {children}
-    </div>
-  )
+  const viewCards = [
+    { view: 'Forecast', what: 'Predicted electricity prices for the next 72 hours at 15-min resolution.', use: 'Decide when to charge batteries, run heavy industrial loads, or activate hedging contracts.' },
+    { view: 'Backtest', what: 'Comparison of past model predictions vs actual market prices.', use: 'Evaluate accuracy over 1, 3, 7 or 14 days. MAE shows the average error in €/MWh.' },
+    { view: 'Energy mix', what: 'Renewable vs conventional generation over the last 7 days.', use: 'Understand what drove prices — high solar/wind usually means cheaper prices.' },
+  ]
 
-  const Tag = ({ label, color }) => (
-    <span style={{ display: 'inline-block', background: color + '22', border: `1px solid ${color}55`, color, fontFamily: 'monospace', fontSize: '0.6rem', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: 4, marginRight: 6, marginBottom: 4 }}>{label}</span>
-  )
+  const tags = ['price lags', 'moving averages', 'hour / day / month', 'holidays', 'generation', 'consumption', 'wind onshore', 'temperature', 'solar radiation', 'TTF gas price']
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
-
-      {/* Hero */}
-      <div style={{ marginBottom: '3rem' }}>
-        <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '1.8rem', fontWeight: 700, color: textPrimary, letterSpacing: '-0.03em', marginBottom: 8 }}>
-          Grid<span style={{ color: '#E8640A' }}>Intelligence</span>
+    <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 48 }}>
+      <div>
+        <h1 style={{ fontFamily: THEME.fonts.sans, fontSize: 38, fontWeight: 600, letterSpacing: '-0.03em', color: palette.text, lineHeight: 1, margin: '20px 0 16px' }}>
+          grid<span style={{ color: palette.accent }}>·intelligence</span>
         </h1>
-        <p style={{ fontSize: '0.95rem', color: textBody, lineHeight: 1.8, maxWidth: 620 }}>
-          A forecasting tool for day-ahead electricity prices in the German-Luxembourg market (DE-LU). It helps energy traders, industrial consumers, and grid operators make smarter decisions about when to buy, sell, or shift energy consumption.
+        <p style={{ fontFamily: THEME.fonts.sans, fontSize: 15, color: palette.textMuted, lineHeight: 1.7, maxWidth: 620, margin: 0 }}>
+          A forecasting tool for day-ahead electricity prices in the German-Luxembourg market (DE-LU). It helps energy traders, industrial consumers, and grid operators make smarter decisions about when to buy, sell, or shift consumption.
         </p>
       </div>
 
-      {/* What each view does */}
-      <Section title="What does each view tell you?">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
-          {[
-            {
-              view: 'Forecast',
-              color: '#E8640A',
-              what: 'Predicted electricity prices for the next 72 hours at 15-min resolution.',
-              use: 'Decide when to charge batteries, run heavy industrial loads, or activate hedging contracts.',
-            },
-            {
-              view: 'Backtest',
-              color: '#378ADD',
-              what: 'Comparison of past model predictions vs actual market prices.',
-              use: 'Evaluate how accurate the model was over the last 1, 3, 7, or 14 days. MAE tells you the average error in €/MWh.',
-            },
-            {
-              view: 'Energy Mix',
-              color: '#1D9E75',
-              what: 'Renewable vs conventional generation over the last 7 days.',
-              use: 'Understand what drove prices — high solar/wind usually means cheaper prices; gas-heavy periods tend to be expensive.',
-            },
-          ].map(v => (
-            <div key={v.view} style={{ background: accentBg, border: `1px solid ${border}`, borderTop: `3px solid ${v.color}`, borderRadius: 12, padding: '1.2rem' }}>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: v.color, marginBottom: 8 }}>{v.view}</div>
-              <p style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6, marginBottom: 10 }}><strong style={{ color: textPrimary }}>Shows:</strong> {v.what}</p>
-              <p style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6 }}><strong style={{ color: textPrimary }}>Use it to:</strong> {v.use}</p>
-            </div>
+      <div>
+        <Heading>What each view tells you</Heading>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="three-col">
+          {viewCards.map(v => (
+            <Card key={v.view} padding="16px">
+              <div style={{ fontFamily: THEME.fonts.sans, fontSize: 14, fontWeight: 600, color: palette.accent, marginBottom: 10, letterSpacing: '-0.01em' }}>{v.view}</div>
+              <p style={{ fontFamily: THEME.fonts.sans, fontSize: 12.5, color: palette.text, lineHeight: 1.6, marginBottom: 8 }}>{v.what}</p>
+              <p style={{ fontFamily: THEME.fonts.sans, fontSize: 12, color: palette.textMuted, lineHeight: 1.6 }}>{v.use}</p>
+            </Card>
           ))}
         </div>
-      </Section>
+      </div>
 
-      {/* Model */}
-      <Section title="How the model works">
-        <Card accent="#E8640A">
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: textPrimary, marginBottom: 6 }}>
-            XGBoost — Multi-Regime
-          </div>
-          <p style={{ fontSize: '0.85rem', color: textBody, lineHeight: 1.7, marginBottom: 12 }}>
-            The market doesn't behave the same way in all conditions. During normal periods, prices follow predictable patterns. During spikes or negative price events, different forces drive the market. To handle this, we use <strong style={{ color: textPrimary }}>three separate XGBoost models</strong> — one for each regime — plus a classifier that decides which model to use for each prediction.
+      <div>
+        <Heading>How the model works</Heading>
+        <Card padding="22px 26px">
+          <div style={{ fontFamily: THEME.fonts.sans, fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 10, letterSpacing: '-0.02em' }}>XGBoost · Multi-regime</div>
+          <p style={{ fontFamily: THEME.fonts.sans, fontSize: 13.5, color: palette.textMuted, lineHeight: 1.7, marginBottom: 18 }}>
+            The market doesn't behave the same way in all conditions. We use three separate XGBoost models — one per regime — plus a classifier that decides which model to use for each prediction.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }} className="three-col">
             {[
-              { label: 'Normal regime', sub: 'Most hours', color: '#1D9E75' },
-              { label: 'Positive spike', sub: 'Price > 140 €/MWh', color: '#E8640A' },
-              { label: 'Negative prices', sub: 'Price < 0 €/MWh', color: '#378ADD' },
+              { label: 'Normal regime', sub: 'Most hours', color: palette.pos },
+              { label: 'Positive spike', sub: '> 140 €/MWh', color: palette.neg },
+              { label: 'Negative prices', sub: '< 0 €/MWh', color: palette.info },
             ].map(r => (
-              <div key={r.label} style={{ background: r.color + '11', border: `1px solid ${r.color}33`, borderRadius: 8, padding: '0.7rem 1rem' }}>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.65rem', fontWeight: 700, color: r.color }}>{r.label}</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: textMuted, marginTop: 2 }}>{r.sub}</div>
+              <div key={r.label} style={{ background: `${r.color}14`, border: `1px solid ${r.color}33`, borderRadius: 6, padding: '10px 12px' }}>
+                <div style={{ fontFamily: THEME.fonts.mono, fontSize: 11, fontWeight: 600, color: r.color, letterSpacing: '0.04em' }}>{r.label}</div>
+                <div style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textFaint, marginTop: 3, letterSpacing: '0.04em' }}>{r.sub}</div>
               </div>
             ))}
           </div>
         </Card>
+      </div>
 
-        <Card accent="#9b59b6">
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.95rem', color: textPrimary, marginBottom: 6 }}>
-            SHAP — Why this prediction?
-          </div>
-          <p style={{ fontSize: '0.85rem', color: textBody, lineHeight: 1.7 }}>
-            The "Feature influence" panel explains every prediction. SHAP values show which inputs pushed the price up or down — for example, high solar radiation pushing prices down, or low wind onshore pushing them up. This makes the model transparent and actionable.
-          </p>
-        </Card>
-      </Section>
-
-      {/* Training data */}
-      <Section title="Training data">
-        <Card>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      <div>
+        <Heading>Training data</Heading>
+        <Card padding="22px 26px">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }} className="two-col">
             <div>
-              <div style={{ fontFamily: 'monospace', fontSize: '0.6rem', color: textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Historical range</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: textPrimary, marginBottom: 4 }}>2018 — 2026</div>
-              <div style={{ fontSize: '0.82rem', color: textBody, lineHeight: 1.6 }}>Over 267,000 data points at 15-min resolution. Covers multiple market regimes including the 2021–2022 energy crisis.</div>
+              <div style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 8 }}>Historical range</div>
+              <div style={{ fontFamily: THEME.fonts.sans, fontSize: 28, fontWeight: 600, color: palette.text, marginBottom: 6, letterSpacing: '-0.025em' }}>2018 — 2026</div>
+              <div style={{ fontFamily: THEME.fonts.sans, fontSize: 12.5, color: palette.textMuted, lineHeight: 1.6 }}>Over 267,000 data points at 15-min resolution. Covers multiple market regimes including the 2021–2022 energy crisis.</div>
             </div>
             <div>
-              <div style={{ fontFamily: 'monospace', fontSize: '0.6rem', color: textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Input features (25 total)</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                <Tag label="price lags" color="#E8640A" />
-                <Tag label="moving averages" color="#E8640A" />
-                <Tag label="hour / day / month" color="#378ADD" />
-                <Tag label="holidays" color="#378ADD" />
-                <Tag label="generation" color="#1D9E75" />
-                <Tag label="consumption" color="#1D9E75" />
-                <Tag label="wind onshore" color="#1D9E75" />
-                <Tag label="temperature" color="#378ADD" />
-                <Tag label="solar radiation" color="#378ADD" />
-                <Tag label="TTF gas price" color="#9b59b6" />
+              <div style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 }}>Input features · 25 total</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {tags.map(t => (
+                  <span key={t} style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, border: `1px solid ${palette.border}`, borderRadius: 3, padding: '3px 8px' }}>{t}</span>
+                ))}
               </div>
             </div>
           </div>
         </Card>
-      </Section>
+      </div>
 
-      {/* Live data */}
-      <Section title="How data stays up to date">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
+      <div>
+        <Heading>Data sources</Heading>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="three-col">
           {[
-            { icon: '⚡', label: 'ENTSO-E', sub: 'Updated daily', detail: 'Prices, generation, load and wind data for the DE-LU zone. Fetched every morning automatically.', color: '#E8640A' },
-            { icon: '🌤', label: 'Open-Meteo', sub: 'Updated daily', detail: 'Weather observations and 3-day forecast for Germany. Temperature, solar radiation, wind speed, cloud cover.', color: '#378ADD' },
-            { icon: '⛽', label: 'TTF Gas', sub: 'Updated daily', detail: 'European natural gas benchmark price via Yahoo Finance. Highly correlated with electricity prices in Germany.', color: '#1D9E75' },
+            { Ic: Icon.bolt, label: 'ENTSO-E', sub: 'Updated daily', detail: 'Prices, generation, load and wind data for the DE-LU zone.' },
+            { Ic: Icon.cloud, label: 'Open-Meteo', sub: 'Updated daily', detail: 'Weather observations and 3-day forecast: temperature, solar radiation, wind, cloud cover.' },
+            { Ic: Icon.gas, label: 'TTF gas', sub: 'Updated daily', detail: 'European natural gas benchmark via Yahoo Finance. Highly correlated with DE prices.' },
           ].map(s => (
-            <div key={s.label} style={{ background: accentBg, border: `1px solid ${border}`, borderTop: `3px solid ${s.color}`, borderRadius: 12, padding: '1.2rem' }}>
-              <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{s.icon}</div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '0.9rem', color: textPrimary, marginBottom: 2 }}>{s.label}</div>
-              <div style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: s.color, marginBottom: 8 }}>{s.sub}</div>
-              <p style={{ fontSize: '0.8rem', color: textBody, lineHeight: 1.6 }}>{s.detail}</p>
-            </div>
+            <Card key={s.label} padding="16px 18px">
+              <div style={{ color: palette.accent, marginBottom: 10, display: 'flex' }}><s.Ic size={20} /></div>
+              <div style={{ fontFamily: THEME.fonts.sans, fontSize: 14, fontWeight: 600, color: palette.text, marginBottom: 2, letterSpacing: '-0.01em' }}>{s.label}</div>
+              <div style={{ fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textMuted, marginBottom: 8, letterSpacing: '0.06em' }}>{s.sub}</div>
+              <p style={{ fontFamily: THEME.fonts.sans, fontSize: 12, color: palette.textMuted, lineHeight: 1.6, margin: 0 }}>{s.detail}</p>
+            </Card>
           ))}
         </div>
-        <div style={{ marginTop: 8, padding: '0.8rem 1rem', background: '#E8640A11', border: '1px solid #E8640A33', borderRadius: 8 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', color: '#E8640A' }}>
-            ⏰ All sources are fetched automatically every day at 06:00 UTC — no manual updates needed.
+        <div style={{ marginTop: 12, padding: '10px 14px', background: palette.accentSoft, border: `1px solid ${palette.accent}33`, borderRadius: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <LiveDot color={palette.accent} size={6} />
+          <span style={{ fontFamily: THEME.fonts.mono, fontSize: 11, color: palette.accent, letterSpacing: '0.04em' }}>
+            All sources refresh automatically every day at 06:00 UTC — no manual updates needed.
           </span>
         </div>
-      </Section>
+      </div>
 
-      {/* Footer */}
-      <div style={{ padding: '1rem 1.2rem', background: accentBg, border: `1px solid ${border}`, borderRadius: 10, fontFamily: 'monospace', fontSize: '0.65rem', color: textMuted, letterSpacing: '0.06em' }}>
-        Built by Javier Inocente · Le Wagon Berlin · April 2026 · DE-LU Electricity Market Forecasting
+      <div style={{ padding: '14px 18px', border: `1px solid ${palette.border}`, borderRadius: 6, fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textFaint, letterSpacing: '0.1em' }}>
+        Built by Javier Inocente · Le Wagon Berlin · April 2026 · DE-LU electricity market forecasting
       </div>
     </div>
   )
 }
 
+// ============================================================================
+// SHELL
+// ============================================================================
 
-export default function App() {
-  const [view, setView] = useState('forecast')
-  const [dark, setDark] = useState(true)
-  const [now, setNow] = useState(new Date().toUTCString().replace('GMT', 'UTC'))
+function Nav({ view, setView }) {
+  const { palette } = useTheme()
+  const views = [
+    { id: 'forecast', label: 'Forecast', Ic: Icon.forecast },
+    { id: 'backtest', label: 'Backtest', Ic: Icon.backtest },
+    { id: 'energymix', label: 'Energy mix', Ic: Icon.mix },
+    { id: 'about', label: 'About', Ic: Icon.about },
+  ]
+  return (
+    <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      {views.map(v => {
+        const active = view === v.id
+        return (
+          <button key={v.id} onClick={() => setView(v.id)} style={{
+            background: 'transparent',
+            color: active ? palette.text : palette.textMuted,
+            border: 'none', borderRadius: 0,
+            padding: '8px 14px', margin: 0,
+            fontFamily: THEME.fonts.sans, fontSize: 13, fontWeight: active ? 500 : 400,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+            letterSpacing: '-0.005em',
+            borderBottom: `1.5px solid ${active ? palette.accent : 'transparent'}`,
+            transition: 'color 0.15s',
+          }}>
+            <v.Ic size={14} />
+            {v.label}
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
 
+function ModeToggle({ mode, setMode }) {
+  const { palette } = useTheme()
+  return (
+    <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} style={{
+      background: 'transparent', border: `1px solid ${palette.border}`, borderRadius: 999,
+      width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer', color: palette.textMuted,
+    }} title={mode === 'dark' ? 'Switch to light' : 'Switch to dark'}>
+      {mode === 'dark' ? <Icon.sun size={14} /> : <Icon.moon size={14} />}
+    </button>
+  )
+}
+
+function Avatar() {
+  const { palette } = useTheme()
+  return (
+    <div style={{
+      width: 30, height: 30, borderRadius: '50%',
+      background: palette.accentSoft, border: `1px solid ${palette.accent}55`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: palette.accent, fontSize: 10, fontWeight: 600,
+      fontFamily: THEME.fonts.mono, cursor: 'pointer', letterSpacing: '0.04em',
+    }}>JI</div>
+  )
+}
+
+function StatusBar() {
+  const { palette } = useTheme()
+  const [now, setNow] = useState(new Date())
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date().toUTCString().replace('GMT', 'UTC')), 60000)
+    const t = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(t)
   }, [])
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: THEME.fonts.mono, fontSize: 10, color: palette.textFaint, letterSpacing: '0.08em' }}>
+      <LiveDot color={palette.pos} size={6} />
+      <span style={{ textTransform: 'uppercase' }}>
+        Live · {now.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' })} UTC
+      </span>
+    </div>
+  )
+}
 
-  const bg = dark ? '#111' : '#bec3bf'
-  const headerBorder = dark ? '#222' : '#bec3bf'
-  const navColor = dark ? 'rgba(255,255,255,0.35)' : '#aaa'
-  const navActive = dark ? '#fff' : '#111'
-  const footerColor = dark ? 'rgba(255,255,255,0.15)' : '#ccc'
+export default function App() {
+  const [mode, setMode] = useState(() => localStorage.getItem('grid-mode') || 'dark')
+  const [view, setView] = useState(() => localStorage.getItem('grid-view') || 'forecast')
 
-const views = [
-{ id: 'forecast', label: 'Forecast', icon: '/icons8-prediction-64.png' },
-  { id: 'backtest', label: 'Backtest', icon: '/icons8-history-50.png' },
-  { id: 'energymix', label: 'Energy Mix', icon: '/icons8-solar-energy-50.png' },
-  { id: 'about', label: 'About', icon: null },
-]
+  useEffect(() => { localStorage.setItem('grid-mode', mode) }, [mode])
+  useEffect(() => { localStorage.setItem('grid-view', view) }, [view])
+
+  const palette = THEME[mode]
+
+  useEffect(() => {
+    document.body.style.background = palette.bg
+    document.body.style.color = palette.text
+  }, [palette.bg, palette.text])
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body, #root { width: 100%; min-height: 100vh; }
-        body { background: ${bg}; transition: background 0.2s; overflow-x: hidden; }
-        @media (max-width: 768px) {
-          .two-col { grid-template-columns: 1fr !important; }
-          .four-col { grid-template-columns: repeat(2, 1fr) !important; }
-          .main-pad { padding: 1rem !important; }
-        }
-        button { transition: all 0.15s; }
-        button:hover { opacity: 0.85; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${dark ? '#333' : '#ddd'}; border-radius: 3px; }
-      `}</style>
-
-      <div style={{ minHeight: '100vh', background: bg, transition: 'background 0.2s' }}>
-
-        <header style={{ background: bg, height: 60, position: 'sticky', top: 0, zIndex: 100 }}>
-
-          <div style={{ maxWidth: 1280, margin: '0 auto', height: '100%', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Logo dark={dark} />
-
-            <nav style={{ display: 'flex', alignItems: 'center', gap: 20, background: dark ? '#2a2a2a' : '#dedede', borderRadius: 34, padding: '6px' }}>
-              {views.map(v => (
-                <button key={v.id} onClick={() => setView(v.id)} style={{
-                  background: view === v.id ? (dark ? '#3a3a3a' : '#d3a5a5') : 'transparent',
-                  color: view === v.id ? navActive : navColor,
-                  border: 'none', borderRadius: 20,
-                  padding: '6px 18px', fontFamily: "'DM Sans', sans-serif",
-                  fontSize: '0.82rem', fontWeight: view === v.id ? 600 : 400,
-                  cursor: 'pointer', letterSpacing: '-0.01em',
-                  boxShadow: view === v.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none'
-                }}>
-                {v.icon && <img src={v.icon} style={{ width: 16, height: 16, marginRight: 6, verticalAlign: 'middle', opacity: view === v.id ? 1 : 0.4 }} />}
-                {v.label}
-              </button>
-              ))}
-            </nav>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: '0.58rem', color: dark ? 'rgba(255,255,255,0.25)' : '#ccc' }}>
-                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', marginRight: 5, verticalAlign: 'middle' }} />
-                {now}
-              </span>
-              <button onClick={() => setDark(!dark)} style={{ background: dark ? '#2a2a2a' : '#d8d7d1', border: 'none', borderRadius: 20, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem', color: dark ? '#fff' : '#555' }}>
-                {dark ? '☀️' : '🌙'}
-              </button>
+    <ThemeCtx.Provider value={{ palette, mode }}>
+      <div style={{ minHeight: '100vh', background: palette.bg, color: palette.text, fontFamily: THEME.fonts.sans }}>
+        <header style={{ position: 'sticky', top: 0, zIndex: 50, background: palette.bg }}>
+          <div className="container" style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
+            <Logo pulse={true} />
+            <Nav view={view} setView={setView} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <StatusBar />
+              <ModeToggle mode={mode} setMode={setMode} />
               <Avatar />
             </div>
           </div>
         </header>
 
-        <main className="main-pad" style={{ padding: '5rem 2rem 4rem 2rem', maxWidth: 1280, margin: '0 auto' }}>
-          {view === 'forecast' && <PredictView dark={dark} />}
-          {view === 'backtest' && <BacktestView dark={dark} />}
-          {view === 'energymix' && <EnergyMixView dark={dark} />}
-          {view === 'about' && <AboutView dark={dark} />}
+        <main className="container" style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 32px 64px' }}>
+          {view === 'forecast' && <ForecastView />}
+          {view === 'backtest' && <BacktestView />}
+          {view === 'energymix' && <EnergyMixView />}
+          {view === 'about' && <AboutView />}
         </main>
 
-        <footer style={{ padding: '1.2rem 2rem', marginTop: '4rem', borderTop: `1px solid ${headerBorder}` }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: footerColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Grid Intelligence · Le Wagon Berlin · April 2026 · DE-LU Electricity Market
+        <footer style={{ borderTop: `1px solid ${palette.border}`, padding: '18px 32px', marginTop: 32 }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontFamily: THEME.fonts.mono, fontSize: 9, color: palette.textFaint, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              grid·intelligence · Le Wagon Berlin · 2026
             </span>
-            <span style={{ fontFamily: 'monospace', fontSize: '0.55rem', color: footerColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Transformer V3 + XGBoost Spike Detector
+            <span style={{ fontFamily: THEME.fonts.mono, fontSize: 9, color: palette.textFaint, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              XGBoost multi-regime · SHAP explainable
             </span>
           </div>
         </footer>
       </div>
-    </>
+    </ThemeCtx.Provider>
   )
 }

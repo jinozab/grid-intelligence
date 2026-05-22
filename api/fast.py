@@ -241,37 +241,20 @@ def get_energy_mix(days: int = 7):
     Return renewable vs non-renewable generation and consumption for the last N days.
     """
     try:
-        from grid_intelligence.data.fetcher import DataFetcher
-        from sqlalchemy import create_engine, text
-        from grid_intelligence.params import DATABASE_URL, PG_TABLE, ENV
-        from google.cloud import bigquery
-        from grid_intelligence.params import GCP_PROJECT, BQ_TABLE_ID
-
+        from sqlalchemy import create_engine
+        from grid_intelligence.params import DATABASE_URL, PG_TABLE
         rows = days * 24 * 4
-
-        if ENV == 'production':
-            engine = create_engine(DATABASE_URL)
-            query = f"""
-                SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
-                FROM {PG_TABLE}
-                WHERE datetime_utc IS NOT NULL
-                ORDER BY datetime_utc DESC
-                LIMIT {rows}
-            """
-            df = pd.read_sql(query, engine)
-        else:
-            query = f"""
-                SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
-                FROM `{BQ_TABLE_ID}`
-                WHERE datetime_utc IS NOT NULL
-                ORDER BY datetime_utc DESC
-                LIMIT {rows}
-            """
-            df = pandas_gbq.read_gbq(query, project_id=GCP_PROJECT)
-
+        engine = create_engine(DATABASE_URL)
+        query = f"""
+            SELECT datetime_utc, generation_renewable, generation_non_renewable, consumption, price
+            FROM {PG_TABLE}
+            WHERE datetime_utc IS NOT NULL
+            ORDER BY datetime_utc DESC
+            LIMIT {rows}
+        """
+        df = pd.read_sql(query, engine)
         df = df.sort_values('datetime_utc').reset_index(drop=True)
         df['datetime_utc'] = df['datetime_utc'].astype(str)
-
         payload = {
             "timestamps": df['datetime_utc'].tolist(),
             "generation_renewable": [None if math.isnan(v) or math.isinf(v) else round(float(v), 2) for v in df['generation_renewable']],
