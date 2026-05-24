@@ -1,70 +1,79 @@
-# grid·intelligence — Ember redesign · Drop-in instructions
+Three services orchestrated with Docker Compose:
 
-## 1. Reemplazar archivos
+| Service    | Description                  | Port |
+|------------|------------------------------|------|
+| `postgres` | Consolidated dataset store   | —    |
+| `api`      | FastAPI (model serving)      | 8001 |
+| `frontend` | React/Vite dashboard         | 3001 |
 
-Copiá los archivos de esta carpeta a tu repo:
+A central Traefik instance handles reverse proxying.
 
-```
-repo/src/App.jsx      →  src/App.jsx       (REEMPLAZA)
-repo/src/index.css    →  src/index.css     (REEMPLAZA)
-repo/index.html       →  index.html        (REEMPLAZA — agrega los <link> de fuentes)
-repo/public/favicon.svg → public/favicon.svg (REEMPLAZA)
-```
+## Data Sources
 
-`main.jsx` y `package.json` quedan igual. Tus endpoints (`/predict`, `/explain`, `/backtest`, `/energy-mix`) tampoco cambian.
+| Source         | Data                                              |
+|----------------|---------------------------------------------------|
+| ENTSO-E        | Day-ahead prices, generation, load, wind onshore  |
+| Open-Meteo     | Temperature, humidity, cloud cover, radiation, wind (ERA5 + forecast) |
+| Yahoo Finance  | TTF gas, WTI, Brent, Henry Hub                    |
 
-## 2. Borrar archivos viejos (ya no se usan)
+Data is consolidated into a single growing table at 15-min resolution in UTC. A daily delta fetch (06:00 UTC via APScheduler) pulls the most recent days with a 7-day overlap to absorb ENTSO-E revisions, deduplicating on the latest values.
 
-```
-src/App.css                       ← borrar
-public/logo.png                   ← borrar (el logo ahora es SVG inline)
-public/icons8-history-50.png      ← borrar
-public/icons8-prediction-64.png   ← borrar
-public/icons8-solar-energy-50.png ← borrar
-public/icons.svg                  ← borrar (icons ahora son SVG inline)
-```
+## Model
 
-## 3. Verificar dependencias
+**Transformer (main)** — `nn.TransformerEncoder`, 24h × 25 features input, predicts price 24h ahead. Known-future calendar features (e.g. `target_hour`, `target_is_holiday`) are valid inputs since they're knowable at prediction time.
 
-Ya tenés todo, pero por las dudas:
+**Spike detector (complementary)** — XGBoost classifier, threshold at 200 EUR/MWh, `scale_pos_weight` for class imbalance. Gives a risk signal alongside the price level.
+
+| Model            | MAE (EUR/MWh) | Horizon |
+|------------------|---------------|---------|
+| Prophet          | 72.70         | 1 year  |
+| ARIMA            | 38.93         | 1h      |
+| XGBoost          | 31.31         | 24h     |
+| **Transformer**  | **~26**       | 24h     |
+
+## API Endpoints
+
+| Endpoint       | Description                          |
+|----------------|--------------------------------------|
+| `GET /`        | Health check                         |
+| `POST /predict`| 24h price forecast                   |
+| `POST /explain`| Feature attribution                  |
+| `GET /backtest`| Historical backtest results          |
+| `GET /energy-mix` | Generation breakdown by source    |
+| `GET /features`| Computed feature vector              |
+| `POST /fetch-delta` | Trigger delta data fetch        |
+
+## Quick Start
 
 ```bash
-npm install
-# axios + recharts + react + react-dom ya están en tu package.json
+# 1. Clone
+git clone https://github.com/jinozab/grid-intelligence.git
+cd grid-intelligence
+
+# 2. Configure environment
+cp .env.example .env          # add ENTSO-E key, DB credentials
+# create frontend/.env.production with VITE_API_URL
+
+# 3. Run
+docker compose up --build -d
 ```
 
-## 4. Probar
+Dashboard at `http://localhost:3001`, API at `http://localhost:8001`.
 
-```bash
-npm run dev
-```
+## Tech Stack
 
-Vas a ver:
-- Fondo gris-cálido oscuro por default
-- Toggle ☀️/🌙 arriba a la derecha para light mode
-- Logo nuevo (cuadrado-grid con sparkline ámbar)
-- Iconos SVG nuevos en nav
-- Indicador animado (logo pulsa + 4 barritas) mientras carga datos
-- Paleta unificada: ámbar (#f0b070) como acento, verde/rojo solo para semántica
+**ML:** PyTorch · XGBoost · APScheduler
+**Backend:** FastAPI · PostgreSQL · entsoe-py · openmeteo-requests · yfinance
+**Frontend:** React · Vite · Recharts · axios
+**Infra:** Docker Compose · Traefik · Ubuntu 24.04
 
-## 5. Si algo se rompe
+## Roadmap
 
-- **Fonts no cargan**: revisá que el `<link>` de Google Fonts esté en `index.html`
-- **Charts vacíos**: la API no respondió, vas a ver "API connection failed"
-- **Light mode raro**: localStorage tiene `grid-mode` guardado, abrir DevTools → Application → Local Storage → borrar y refrescar
+- Custom domain + TLS
+- Authentication (API + frontend)
+- 15-min resolution retraining
+- Cross-border import/export flows
 
-## Paleta (por si querés tunear algo)
+## Limitations
 
-```js
-dark: {
-  bg: '#16171a',         // fondo principal
-  text: '#ededea',       // texto principal
-  textMuted: '#82827d',  // texto secundario
-  accent: '#f0b070',     // ámbar (acción / brand)
-  pos: '#7dc497',        // verde (positivo)
-  neg: '#e08672',        // rojo (negativo)
-  info: '#9aa5b8',       // azul-gris (neutro)
-}
-```
-
-Cambiá `accent` y se actualiza en todos lados.
+Spike recall is ~0.29 — the model misses most spikes by design, trading recall for precision on the price level. Production uses forecasted weather while training used observed weather, leaving a known gap.
