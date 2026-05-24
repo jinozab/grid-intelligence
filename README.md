@@ -1,3 +1,24 @@
+# Grid Intelligence
+
+Day-ahead electricity price forecasting for the **DE-LU** bidding zone (Germany/Luxembourg). A Transformer model predicts hourly prices 24h ahead, complemented by an XGBoost spike detector for high-price risk alerts.
+
+## Overview
+
+Day-ahead prices in the DE-LU zone are volatile and driven by renewables, load, weather, and fuel costs. This project builds an end-to-end pipeline — from data ingestion to a served API and dashboard — to forecast those prices and flag spike risk.
+
+- **Main model:** PyTorch Transformer (24h window → price 24h ahead)
+- **Spike detector:** XGBoost binary classifier (price > 200 EUR/MWh)
+- **Serving:** FastAPI backend + React/Vite dashboard
+- **Data:** 15-min resolution, UTC, single source of truth in PostgreSQL
+
+## Architecture
+
+```
+ENTSO-E ─┐
+Open-Meteo ─┼─► Fetcher ─► PostgreSQL ─► Features ─► Transformer ─► FastAPI ─► React Dashboard
+Yahoo Fin. ─┘   (delta)     (15-min UTC)              + XGBoost
+```
+
 Three services orchestrated with Docker Compose:
 
 | Service    | Description                  | Port |
@@ -33,15 +54,15 @@ Data is consolidated into a single growing table at 15-min resolution in UTC. A 
 
 ## API Endpoints
 
-| Endpoint       | Description                          |
-|----------------|--------------------------------------|
-| `GET /`        | Health check                         |
-| `POST /predict`| 24h price forecast                   |
-| `POST /explain`| Feature attribution                  |
-| `GET /backtest`| Historical backtest results          |
-| `GET /energy-mix` | Generation breakdown by source    |
-| `GET /features`| Computed feature vector              |
-| `POST /fetch-delta` | Trigger delta data fetch        |
+| Endpoint            | Description                  |
+|---------------------|------------------------------|
+| `GET /`             | Health check                 |
+| `POST /predict`     | 24h price forecast           |
+| `POST /explain`     | Feature attribution          |
+| `GET /backtest`     | Historical backtest results  |
+| `GET /energy-mix`   | Generation breakdown by source |
+| `GET /features`     | Computed feature vector      |
+| `POST /fetch-delta` | Trigger delta data fetch     |
 
 ## Quick Start
 
